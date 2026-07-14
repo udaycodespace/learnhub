@@ -50,17 +50,24 @@ const Dashboard = () => {
    const [selectedComponent, setSelectedComponent] = useState('home');
 
    const renderSelectedComponent = () => {
+      const userType = user?.userData?.type;
       switch (selectedComponent) {
          case 'home':
             return <UserHome />
          case 'addcourse':
-            return <AddCourse />
+            if (userType === 'Teacher' || userType === 'Admin') {
+               return <AddCourse />
+            }
+            return <UserHome />
          case 'enrolledcourese':
             return <EnrolledCourses />
          case 'cousreSection':
             return <CourseContent />
          case 'cousres':
-            return <AllCourses />
+            if (userType === 'Admin') {
+               return <AllCourses />
+            }
+            return <UserHome />
          default:
             return <UserHome />
 
