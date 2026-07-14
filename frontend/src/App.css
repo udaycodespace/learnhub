@@ -709,3 +709,157 @@ body.dark-mode .text-center {
 }
 
 
+
+/* === Landing Page Redesign Styles === */
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  opacity: 0.85;
+  max-width: 540px;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.hero-btn-primary {
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 16px rgba(255, 193, 7, 0.3);
+}
+
+.hero-btn-secondary {
+  font-weight: 600;
+  padding: 12px 32px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  border-width: 2px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: 'Poppins', sans-serif;
+}
+
+.hero-stat-label {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.premium-btn-register {
+  background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%) !important;
+}
+
+/* Features Section */
+.features-section {
+  padding: 4rem 0;
+}
+
+.section-title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: 2rem;
+  text-align: center;
+  color: #181818;
+}
+
+.feature-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-bottom: 0.75rem;
+  color: #181818;
+}
+
+.feature-card p {
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* CTA Section */
+.cta-section {
+  background: linear-gradient(135deg, #0072ff 0%, #00c6ff 100%);
+  padding: 4rem 0;
+  text-align: center;
+  color: #fff;
+}
+
+.cta-title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.cta-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.25rem;
+  }
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+  .hero-stats {
+    gap: 1.5rem;
+  }
+  .hero-stat-number {
+    font-size: 1.5rem;
+  }
+  .features-section .row {
+    flex-direction: column;
+  }
+}
