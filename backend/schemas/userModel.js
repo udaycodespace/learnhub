@@ -21,12 +21,22 @@ const userModel = mongoose.Schema(
       type: String,
       required: [true, "type is required"],
     },
-    // enrolledCourses: [
-    //   {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "course",
-    //   },
-    // ],
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: String,
+    },
+    otpExpiry: {
+      type: Date,
+    },
+    resetToken: {
+      type: String,
+    },
+    resetTokenExpiry: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
