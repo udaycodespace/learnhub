@@ -1,278 +1,390 @@
-import React, { useState, useEffect, useContext } from 'react';
-import axiosInstance from './AxiosInstance';
-import { Button, Modal, Form } from 'react-bootstrap';
-import { UserContext } from '../../App';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-   MDBCol,
-   MDBInput,
-   MDBRow,
-} from "mdb-react-ui-kit";
+import React, { useContext, useEffect, useMemo, useState } from "react";
+import { Button, Form, Modal } from "react-bootstrap";
+import { MDBCol, MDBInput, MDBRow } from "mdb-react-ui-kit";
+import { Link, useNavigate } from "react-router-dom";
+import { UserContext } from "../../App";
+import axiosInstance from "./AxiosInstance";
+
+const paletteByCategory = [
+  ["#f2c14e", "#e56b6f"],
+  ["#5b8def", "#a98bfa"],
+  ["#35a77c", "#b8d85c"],
+  ["#e87a5d", "#f3b562"],
+  ["#694fad", "#ef9aa8"],
+  ["#267a8c", "#82c9b7"],
+];
+
+const levelForCourse = (course, index) => {
+  if (course.C_level) return course.C_level;
+  const levels = ["Beginner", "Intermediate", "All levels"];
+  return levels[index % levels.length];
+};
+
+const descriptionForCourse = (course) =>
+  course.C_description ||
+  course.description ||
+  `A practical introduction to ${course.C_title || "this subject"}, designed to help you build confidence through focused video lessons.`;
+
+const CourseArtwork = ({ course, index }) => {
+  const [start, end] = paletteByCategory[index % paletteByCategory.length];
+  const initials = (course.C_title || "LH")
+    .split(" ")
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase();
+
+  return (
+    <div
+      className="course-artwork"
+      style={{ "--cover-start": start, "--cover-end": end }}
+      aria-hidden="true"
+    >
+      <span className="course-art-grid" />
+      <span className="course-art-ring" />
+      <strong>{initials}</strong>
+      <small>{course.C_categories || "LearnHub original"}</small>
+    </div>
+  );
+};
 
 const AllCourses = () => {
-   const navigate = useNavigate()
-   const user = useContext(UserContext)
-   const [allCourses, setAllCourses] = useState([]);
-   const [filterTitle, setFilterTitle] = useState('');
-   const [filterType, setFilterType] = useState('');
+  const navigate = useNavigate();
+  const user = useContext(UserContext);
+  const [allCourses, setAllCourses] = useState([]);
+  const [filterTitle, setFilterTitle] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [cardDetails, setCardDetails] = useState({
+    cardholdername: "",
+    cardnumber: "",
+    cvvcode: "",
+    expmonthyear: "",
+  });
 
-   const [showModal, setShowModal] = useState(Array(allCourses.length).fill(false));
-   const [cardDetails, setCardDetails] = useState({
-      cardholdername: '',
-      cardnumber: '',
-      cvvcode: '',
-      expmonthyear: '',
-   })
+  const getAllCoursesUser = async () => {
+    setLoading(true);
+    setLoadError("");
 
-   const handleChange = (e) => {
-      setCardDetails({ ...cardDetails, [e.target.name]: e.target.value })
-   }
+    try {
+      const res = await axiosInstance.get("api/user/getallcourses", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
-
-   const handleShow = (courseIndex, coursePrice, courseId, courseTitle) => {
-      if (coursePrice == 'free') {
-         handleSubmit(courseId)
-         return navigate(`/courseSection/${courseId}/${courseTitle}`)
+      if (res.data.success) {
+        setAllCourses(res.data.data || []);
       } else {
-
-         const updatedShowModal = [...showModal];
-         updatedShowModal[courseIndex] = true;
-         setShowModal(updatedShowModal);
+        setLoadError("The course catalog is temporarily unavailable.");
       }
-   };
+    } catch (error) {
+      console.error("Unable to load courses:", error);
+      setLoadError("We could not load courses right now. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-   // Function to handle closing the modal for a specific course
-   const handleClose = (courseIndex) => {
-      const updatedShowModal = [...showModal];
-      updatedShowModal[courseIndex] = false;
-      setShowModal(updatedShowModal);
-   };
+  useEffect(() => {
+    getAllCoursesUser();
+  }, []);
 
-   const getAllCoursesUser = async () => {
-      try {
-         const res = await axiosInstance.get(`api/user/getallcourses`, {
-            headers: {
-               Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-         });
-         if (res.data.success) {
-            setAllCourses(res.data.data);
-         }
-      } catch (error) {
-         console.log('An error occurred:', error);
+  const isPaidCourse = (course) => /\d/.test(course.C_price || "");
+
+  const visibleCourses = useMemo(
+    () =>
+      allCourses.filter((course) => {
+        const matchesTitle =
+          !filterTitle ||
+          course.C_title?.toLowerCase().includes(filterTitle.toLowerCase()) ||
+          course.C_categories?.toLowerCase().includes(filterTitle.toLowerCase());
+
+        const paid = isPaidCourse(course);
+        const matchesType =
+          !filterType ||
+          (filterType === "Free" && !paid) ||
+          (filterType === "Paid" && paid);
+
+        return matchesTitle && matchesType;
+      }),
+    [allCourses, filterTitle, filterType],
+  );
+
+  const resetPaymentForm = () => {
+    setCardDetails({
+      cardholdername: "",
+      cardnumber: "",
+      cvvcode: "",
+      expmonthyear: "",
+    });
+  };
+
+  const handleChange = (event) => {
+    setCardDetails((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  };
+
+  const handleEnroll = (course) => {
+    if (!user.userLoggedIn) {
+      navigate("/login");
+      return;
+    }
+
+    if (!isPaidCourse(course)) {
+      handleSubmit(course._id, course.C_title);
+      return;
+    }
+
+    setSelectedCourse(course);
+  };
+
+  const closePaymentModal = () => {
+    setSelectedCourse(null);
+    resetPaymentForm();
+  };
+
+  const handleSubmit = async (courseId, fallbackTitle) => {
+    try {
+      const res = await axiosInstance.post(
+        `api/user/enrolledcourse/${courseId}`,
+        cardDetails,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      alert(res.data.message);
+      const targetCourse = res.data.course;
+
+      if (targetCourse) {
+        navigate(`/courseSection/${targetCourse.id}/${targetCourse.Title}`);
+      } else if (fallbackTitle) {
+        navigate(`/courseSection/${courseId}/${fallbackTitle}`);
       }
-   };
 
-   useEffect(() => {
-      getAllCoursesUser();
-   }, []);
+      closePaymentModal();
+    } catch (error) {
+      console.error("Unable to enroll:", error);
+      alert("Enrollment could not be completed. Please try again.");
+    }
+  };
 
-   const isPaidCourse = (course) => {
-      // Check if C_price contains a number
-      return /\d/.test(course.C_price);
-   };
+  return (
+    <>
+      <div className="catalog-toolbar">
+        <label className="catalog-search">
+          <span className="search-icon" aria-hidden="true">⌕</span>
+          <span className="sr-only">Search courses</span>
+          <input
+            type="search"
+            placeholder="Search by course or category"
+            value={filterTitle}
+            onChange={(event) => setFilterTitle(event.target.value)}
+          />
+        </label>
 
-   const handleSubmit = async (courseId) => {
-      try {
-         const res = await axiosInstance.post(`api/user/enrolledcourse/${courseId}`, cardDetails, {
-            headers: {
-               Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-         })
-         if (res.data.success) {
-            alert(res.data.message);
-            navigate(`/courseSection/${res.data.course.id}/${res.data.course.Title}`);
-         } else {
-            alert(res.data.message);
-            navigate(`/courseSection/${res.data.course.id}/${res.data.course.Title}`);
-         }
-      } catch (error) {
-         console.log('An error occurred:', error);
-      }
-   }
+        <label className="catalog-filter">
+          <span>Access</span>
+          <select
+            value={filterType}
+            onChange={(event) => setFilterType(event.target.value)}
+            aria-label="Filter courses by access type"
+          >
+            <option value="">All courses</option>
+            <option value="Free">Free</option>
+            <option value="Paid">Paid</option>
+          </select>
+        </label>
 
-   return (
-      <>
-         <div className=" mt-4 filter-container text-center">
-            <p className="mt-3">Serach By: </p>
-            <input
-               type="text"
-               placeholder="title"
-               value={filterTitle}
-               onChange={(e) => setFilterTitle(e.target.value)}
+        <div className="catalog-count" aria-live="polite">
+          <strong>{visibleCourses.length}</strong>
+          <span>{visibleCourses.length === 1 ? "course" : "courses"} found</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="course-state" role="status">
+          <span className="catalog-loader" aria-hidden="true" />
+          <h3>Opening the catalog…</h3>
+          <p>Gathering the latest courses for you.</p>
+        </div>
+      ) : loadError ? (
+        <div className="course-state course-state-error" role="alert">
+          <span aria-hidden="true">!</span>
+          <h3>Course catalog unavailable</h3>
+          <p>{loadError}</p>
+          <button type="button" className="button button-ink" onClick={getAllCoursesUser}>
+            Try again
+          </button>
+        </div>
+      ) : visibleCourses.length > 0 ? (
+        <div className="course-grid">
+          {visibleCourses.map((course, index) => (
+            <article className="catalog-card" key={course._id}>
+              <CourseArtwork course={course} index={index} />
+
+              <div className="catalog-card-body">
+                <div className="course-meta-row">
+                  <span className="course-category">
+                    {course.C_categories || "General"}
+                  </span>
+                  <span className="course-level">
+                    {levelForCourse(course, index)}
+                  </span>
+                </div>
+
+                <h3>{course.C_title}</h3>
+                <p className="course-description">{descriptionForCourse(course)}</p>
+
+                <div className="course-instructor">
+                  <span className="instructor-avatar" aria-hidden="true">
+                    {(course.C_educator || "L").charAt(0).toUpperCase()}
+                  </span>
+                  <div>
+                    <small>CREATED BY</small>
+                    <strong>{course.C_educator || "LearnHub educator"}</strong>
+                  </div>
+                </div>
+
+                <div className="course-card-footer">
+                  <div>
+                    <small>ACCESS</small>
+                    <strong>{isPaidCourse(course) ? course.C_price : "Free"}</strong>
+                  </div>
+                  <div>
+                    <small>LEARNERS</small>
+                    <strong>{course.enrolled || 0}</strong>
+                  </div>
+
+                  {user.userLoggedIn ? (
+                    <button
+                      type="button"
+                      className="course-enroll-button"
+                      onClick={() => handleEnroll(course)}
+                    >
+                      Enroll
+                      <span aria-hidden="true">↗</span>
+                    </button>
+                  ) : (
+                    <Link className="course-enroll-button" to="/login">
+                      Sign in to enroll
+                      <span aria-hidden="true">↗</span>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="course-state">
+          <span aria-hidden="true">○</span>
+          <h3>No courses match that search</h3>
+          <p>Try a broader keyword or switch the access filter.</p>
+          <button
+            type="button"
+            className="button button-outline"
+            onClick={() => {
+              setFilterTitle("");
+              setFilterType("");
+            }}
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      <Modal show={Boolean(selectedCourse)} onHide={closePaymentModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Enroll in {selectedCourse?.C_title}
+          </Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+          <div className="payment-course-summary">
+            <span>{selectedCourse?.C_categories || "Course"}</span>
+            <strong>{selectedCourse?.C_educator}</strong>
+            <b>{selectedCourse?.C_price}</b>
+          </div>
+
+          <Form
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSubmit(selectedCourse?._id, selectedCourse?.C_title);
+            }}
+          >
+            <MDBInput
+              className="mb-3"
+              label="Card holder name"
+              name="cardholdername"
+              value={cardDetails.cardholdername}
+              onChange={handleChange}
+              type="text"
+              placeholder="Name on card"
+              required
             />
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-               <option value="">All Courses</option>
-               <option value="Paid">Paid</option>
-               <option value="Free">Free</option>
-            </select>
-         </div>
-         <div className='p-2 course-container'>
-            {allCourses?.length > 0 ? (
-               allCourses
-                  .filter(
-                     (course) =>
-                        filterTitle === '' ||
-                        course.C_title?.toLowerCase().includes(filterTitle?.toLowerCase())
-                  )
-                  .filter((course) => {
-                     if (filterType === 'Free') {
-                        return !isPaidCourse(course);
-                     } else if (filterType === 'Paid') {
-                        return isPaidCourse(course);
-                     } else {
-                        return true;
-                     }
-                  })
-                  .map((course, index) => (
-                     <div
-                        key={course._id}
-                        className="course futuristic-card"
-                        style={{ width: '370px', margin: '22px', borderRadius: '22px', background: 'linear-gradient(135deg, #0f2027 0%, #2c5364 100%)', boxShadow: '0 0 32px #00e0ff55, 0 2px 12px #1e90ff22', padding: '0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', minHeight: '180px', minWidth: '270px' }}
-                        onMouseEnter={e => {
-                          e.currentTarget.querySelector('.futuristic-card-front').style.opacity = '0';
-                          e.currentTarget.querySelector('.futuristic-card-front').style.filter = 'blur(2.5px) brightness(1.1)';
-                          e.currentTarget.querySelector('.futuristic-card-front').style.pointerEvents = 'none';
-                          e.currentTarget.querySelector('.futuristic-card-back').style.opacity = '1';
-                          e.currentTarget.querySelector('.futuristic-card-back').style.filter = 'none';
-                          e.currentTarget.querySelector('.futuristic-card-back').style.pointerEvents = 'auto';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.querySelector('.futuristic-card-front').style.opacity = '1';
-                          e.currentTarget.querySelector('.futuristic-card-front').style.filter = 'none';
-                          e.currentTarget.querySelector('.futuristic-card-front').style.pointerEvents = 'auto';
-                          e.currentTarget.querySelector('.futuristic-card-back').style.opacity = '0';
-                          e.currentTarget.querySelector('.futuristic-card-back').style.filter = 'none';
-                          e.currentTarget.querySelector('.futuristic-card-back').style.pointerEvents = 'none';
-                        }}
-                     >
-                        {/* Front side: Only course name */}
-                        <div
-                          className="futuristic-card-front"
-                          style={{
-                            width: '100%',
-                            height: '180px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #0f2027 0%, #2c5364 100%)',
-                            borderRadius: '22px',
-                            zIndex: 2,
-                            position: 'relative',
-                            transition: 'opacity 0.5s cubic-bezier(.4,0,.2,1), filter 0.5s cubic-bezier(.4,0,.2,1)',
-                            opacity: 1,
-                            pointerEvents: 'auto',
-                          }}
-                        >
-                          <h2 style={{ color: 'rgba(0,255,255,0.92)', fontWeight: 800, fontSize: '1.6rem', letterSpacing: '1.5px', textShadow: '0 2px 16px #00e0ff88', margin: 0, padding: 0, textAlign: 'center' }}>{course.C_title}</h2>
-                        </div>
-                        {/* Back side: Details, shown on hover */}
-                        <div
-                          className="futuristic-card-back"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            background: 'linear-gradient(135deg, #232526 0%, #414345 100%)',
-                            borderRadius: '22px',
-                            zIndex: 3,
-                            opacity: 0,
-                            pointerEvents: 'none',
-                            transition: 'opacity 0.6s cubic-bezier(.4,0,.2,1), filter 0.6s cubic-bezier(.4,0,.2,1)',
-                            filter: 'none',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            padding: '38px 22px 22px 22px',
-                          }}
-                        >
-                          <div style={{ color: '#b3e0ff', fontSize: 13, marginBottom: 6, fontWeight: 500 }}>{course.C_categories}</div>
-                          <div style={{ color: '#7fffd4', fontSize: 12, marginBottom: 10 }}>by: <span style={{ fontWeight: 600 }}>{course.C_educator}</span></div>
-                          <div style={{ color: '#00e0ff', fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Price: <span style={{ color: '#fff', fontWeight: 500 }}>{course.C_price}</span></div>
-                          <div style={{ color: '#00e0ff', fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Enrolled: <span style={{ color: '#fff', fontWeight: 500 }}>{course.enrolled}</span></div>
-                          {user.userLoggedIn === true ?
-                            <>
-                              <Button
-                                className="mt-2"
-                                variant='outline-info'
-                                size='sm'
-                                style={{ fontWeight: 700, borderRadius: 10, marginTop: 12, borderWidth: 2, borderColor: '#00e0ff', color: '#00e0ff', boxShadow: '0 0 12px #00e0ff55', background: 'rgba(0,255,255,0.08)', letterSpacing: '1px' }}
-                                onClick={() => handleShow(index, course.C_price, course._id, course.C_title)}
-                              >
-                                Enroll Now
-                              </Button>
-                              <Modal show={showModal[index]} onHide={() => handleClose(index)}>
-                                <Modal.Header closeButton>
-                                  <Modal.Title>
-                                    Payment for {course.C_title} Course
-                                  </Modal.Title>
-                                </Modal.Header>
-                                <Modal.Body>
-                                  <p style={{ fontSize: 15 }}>Educator: {course.C_educator}</p>
-                                  <p style={{ fontSize: 15 }}>Price: {course.C_price}</p>
-                                  <Form onSubmit={(e) => {
-                                    e.preventDefault()
-                                    handleSubmit(course._id)
-                                  }}>
-                                    <MDBInput className='mb-2' label="Card Holder Name" name='cardholdername' value={cardDetails.cardholdername} onChange={handleChange} type="text" size="md"
-                                      placeholder="Cardholder's Name" contrast required />
-                                    <MDBInput className='mb-2' name='cardnumber' value={cardDetails.cardnumber} onChange={handleChange} label="Card Number" type="number" size="md"
-                                      minLength="0" maxLength="16" placeholder="1234 5678 9012 3457" required />
-                                    <MDBRow className="mb-4">
-                                      <MDBCol md="6">
-                                        <MDBInput name='expmonthyear' value={cardDetails.expmonthyear} onChange={handleChange} className="mb-2" label="Expiration" type="text" size="md"
-                                          placeholder="MM/YYYY" required />
-                                      </MDBCol>
-                                      <MDBCol md="6">
-                                        <MDBInput name='cvvcode' value={cardDetails.cvvcode} onChange={handleChange} className="mb-2" label="Cvv" type="number" size="md" minLength="3"
-                                          maxLength="3" placeholder="●●●" required />
-                                      </MDBCol>
-                                    </MDBRow>
-                                    <div className="d-flex justify-content-end">
-                                      <Button className='mx-2' variant="secondary" onClick={() => handleClose(index)}>
-                                        Close
-                                      </Button>
-                                      <Button variant="primary" type='submit'>
-                                        Pay Now
-                                      </Button>
-                                    </div>
-                                  </Form>
-                                </Modal.Body>
-                              </Modal>
-                            </>
-                            : <Link to={'/login'}><Button
-                              className="mt-2"
-                              variant='outline-info'
-                              size='sm'
-                              style={{ fontWeight: 700, borderRadius: 10, marginTop: 12, borderWidth: 2, borderColor: '#00e0ff', color: '#00e0ff', boxShadow: '0 0 12px #00e0ff55', background: 'rgba(0,255,255,0.08)', letterSpacing: '1px' }}
-                            >
-                              Enroll Now
-                            </Button></Link>}
-                        </div>
-                        {/* Futuristic glowing border effect */}
-                        <div style={{
-                          position: 'absolute',
-                          inset: 0,
-                          borderRadius: '22px',
-                          pointerEvents: 'none',
-                          zIndex: 1,
-                          boxShadow: '0 0 0 2px #00e0ff55, 0 0 32px 8px #00e0ff22',
-                          border: '2px solid transparent',
-                          background: 'linear-gradient(120deg,rgba(0,224,255,0.13),rgba(44,83,100,0.13))',
-                          opacity: 0.7,
-                          transition: 'opacity 0.5s cubic-bezier(.4,0,.2,1)'
-                        }} />
-                     </div>
-                  ))
-            ) : (
-               <p>No courses at the moment</p>
-            )}
-         </div>
-      </>
-   );
+            <MDBInput
+              className="mb-3"
+              name="cardnumber"
+              value={cardDetails.cardnumber}
+              onChange={handleChange}
+              label="Card number"
+              type="text"
+              maxLength="16"
+              inputMode="numeric"
+              placeholder="1234 5678 9012 3457"
+              required
+            />
+            <MDBRow className="mb-4">
+              <MDBCol md="6">
+                <MDBInput
+                  name="expmonthyear"
+                  value={cardDetails.expmonthyear}
+                  onChange={handleChange}
+                  className="mb-3"
+                  label="Expiration"
+                  type="text"
+                  placeholder="MM/YYYY"
+                  required
+                />
+              </MDBCol>
+              <MDBCol md="6">
+                <MDBInput
+                  name="cvvcode"
+                  value={cardDetails.cvvcode}
+                  onChange={handleChange}
+                  className="mb-3"
+                  label="CVV"
+                  type="password"
+                  inputMode="numeric"
+                  maxLength="3"
+                  placeholder="•••"
+                  required
+                />
+              </MDBCol>
+            </MDBRow>
+
+            <div className="payment-actions">
+              <Button variant="light" type="button" onClick={closePaymentModal}>
+                Cancel
+              </Button>
+              <Button variant="dark" type="submit">
+                Complete mock payment
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
+    </>
+  );
 };
 
 export default AllCourses;
