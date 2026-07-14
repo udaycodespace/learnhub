@@ -73,7 +73,7 @@ Thanks to everyone who has contributed to **LearnHub** 🎉
 
 ## 🌟 Overview
 
-LearnHub is a course platform where teachers upload video lectures and students work through them at their own pace. Students enroll, watch content, mark sections complete, and download a certificate once they finish a course. Teachers get their own dashboard to publish courses and check who's enrolled. Admins can see everything on the platform: users, courses, and payment activity.
+LearnHub is a course platform where teachers upload video lectures and students work through them at their own pace. Students enroll, watch content, mark sections complete, and download a PDF certificate once they finish a course. Teachers get their own dashboard to publish courses and check who's enrolled. Admins can view and delete registered users and courses via the React dashboard.
 
 <br/>
 
@@ -84,7 +84,7 @@ flowchart LR
     A[Student] -->|Browse & Enroll| B(Course Catalog)
     B --> C{Free or Paid?}
     C -->|Free| D[Instant Access]
-    C -->|Paid| E[Payment Flow]
+    C -->|Paid| E[Mock Payment Form]
     E --> D
     D --> F[Video Player]
     F --> G[Progress Tracking]
@@ -95,7 +95,6 @@ flowchart LR
 
     K[Admin] -->|Moderate| B
     K --> L[User Management]
-    K --> M[Payment Logs]
 ```
 
 <br/>
@@ -109,7 +108,7 @@ flowchart LR
 | | Technology | Purpose |
 |---|---|---|
 | <img src="https://skillicons.dev/icons?i=express" width="30"/> | **Express.js** | Routes, middleware, and controllers |
-| <img src="https://skillicons.dev/icons?i=mongodb" width="30"/> | **MongoDB** | Stores users, courses, payments, and activity logs |
+| <img src="https://skillicons.dev/icons?i=mongodb" width="30"/> | **MongoDB** | Stores users, courses, and mock payment records (login activity is recorded but not exposed in the UI) |
 | <img src="https://skillicons.dev/icons?i=nodejs" width="30"/> | **Node.js** | Runs the server |
 
 ### Frontend
@@ -152,7 +151,7 @@ pie showData
 
 ### 👨‍🎓 Student
 - Browse and search courses by title or category
-- Enroll instantly in free courses, or pay for premium ones
+- Enroll instantly in free courses, or submit mock card details for premium ones
 - Stream lectures with the built-in video player
 - Mark sections complete and download a certificate
 
@@ -161,7 +160,7 @@ pie showData
 
 ### 👩‍🏫 Teacher
 - Create courses with title, category, description, and price
-- Upload lecture videos as `.mp4` files
+- Upload lecture videos as `.mp4` files (stored locally on server filesystem)
 - Track enrollment numbers for your own courses
 - Delete courses you created
 
@@ -171,8 +170,7 @@ pie showData
 ### 🛡️ Admin
 - View and manage every registered account
 - Remove any course from the platform
-- Review activity logs and enrollment data
-- Track payment transactions platform-wide
+- View enrollment counts per course
 
 </td>
 </tr>
@@ -186,19 +184,18 @@ pie showData
 graph TD
     subgraph Student
         S1[Browse courses]
-        S2[Enroll]
+        S2[Mock Enroll & Pay]
         S3[Watch & track progress]
         S4[Download certificate]
     end
     subgraph Teacher
         T1[Create course]
-        T2[Upload lectures]
+        T2[Upload lectures locally]
         T3[Monitor enrollments]
     end
     subgraph Admin
         A1[Manage users]
         A2[Manage courses]
-        A3[View payment logs]
     end
 ```
 
@@ -210,20 +207,21 @@ graph TD
 learnhub/
 │
 ├── backend/                    # Express API and database models
-│   ├── src/
-│   │   ├── controllers/
-│   │   ├── models/             # Mongoose schemas
-│   │   ├── routes/             # Express routes
-│   │   ├── middleware/         # Auth verification
-│   │   └── config/             # DB connection setup
+│   ├── config/                 # DB connection setup
+│   ├── controllers/            # Controller logic
+│   ├── middlewares/            # Auth and role verification middlewares
+│   ├── routers/                # Express routing files
+│   ├── schemas/                # Mongoose schemas
+│   ├── seed.js                 # Standalone seeding script
 │   ├── .env
 │   └── package.json
 │
 └── frontend/                   # React SPA powered by Vite
     ├── src/
-    │   ├── pages/               # Route-level pages
-    │   ├── hooks/                # Custom React hooks
-    │   └── components/           # Grouped by Admin/User/Common
+    │   ├── components/         # UI components (Admin/User/Common)
+    │   ├── App.css
+    │   ├── App.jsx
+    │   └── main.jsx
     └── package.json
 ```
 
@@ -275,19 +273,36 @@ npm run dev
 # → http://localhost:5173
 ```
 
-### 4. Seed demo data *(optional)*
+### 4. Seed demo data
 
-There's no seeder script in this project yet. If you add one, document it here.
+Run the database seed script to populate roles, courses, and default test accounts:
+
+```bash
+cd backend
+node seed.js
+```
 
 <br/>
 
 ## 🔑 Demo Accounts
 
+After running the seed script, you can log in immediately using these credentials:
+
 | Role | Email | Password |
 |------|-------|----------|
-| Student | `TODO: confirm` | `TODO: confirm` |
-| Teacher | `TODO: confirm` | `TODO: confirm` |
-| Admin | `admin` | `admin123` |
+| Admin | `learn@learnhub.com` | `changethispassword` |
+| Teacher | `teacher@learnhub.com` | `teacherpassword` |
+| Student 1 | `student1@learnhub.com` | `student1password` |
+| Student 2 | `student2@learnhub.com` | `student2password` |
+
+<br/>
+
+## 🛠 Roadmap / Not Yet Implemented
+
+The following features are planned for future releases or currently exist as mock/partial integrations:
+- **Real Payment Gateway Integration**: The platform uses a mock card form that immediately enrolls the student without any real charge. Payment records (card details, status) are stored in MongoDB and accessible via a backend API route, but no React admin page reads them. Integration with Stripe or Razorpay is planned.
+- **Admin Activity Log Viewer**: User logins are recorded to MongoDB (`ActivityLog` collection) by the backend on every login, but no React frontend component reads or displays this data. The feature exists at the data layer only.
+- **Cloud Video Hosting (Cloudinary)**: Video uploads are handled locally via Multer, stored in `./uploads/` on the server filesystem. Cloudinary env vars are present but the SDK is not integrated. Cloud hosting is planned.
 
 <br/>
 
