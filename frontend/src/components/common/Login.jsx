@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
-import Navbar from 'react-bootstrap/Navbar';
-import { Container, Nav } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -9,6 +8,7 @@ import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import axiosInstance from './AxiosInstance';
+import PublicNavBar from './PublicNavBar';
 
 const Login = () => {
    const navigate = useNavigate()
@@ -97,21 +97,7 @@ const Login = () => {
    return (
       <>
 
-         <Navbar expand="lg" className="bg-body-tertiary premium-navbar">
-            <Container fluid>
-               <Navbar.Brand>
-                 <span className="brand-premium"><span className="brand-premium-L">L</span>earnhub</span>
-               </Navbar.Brand>
-               <Navbar.Toggle aria-controls="navbarScroll" />
-               <Navbar.Collapse id="navbarScroll">
-                  <Nav className="ms-auto premium-nav-links">
-                     <Link className="premium-btn" to={'/'}>Home</Link>
-                     <Link className="premium-btn" to={'/login'}>Login</Link>
-                     <Link className="premium-btn" to={'/register'}>Register</Link>
-                  </Nav>
-               </Navbar.Collapse>
-            </Container>
-         </Navbar>
+         <PublicNavBar />
 
          <div className='first-container premium-bg'>
             <Container component="main" className="premium-login-container">
