@@ -1,32 +1,81 @@
 const express = require("express");
+
 const authMiddleware = require("../middlewares/authMiddleware");
+const checkRole = require("../middlewares/roleMiddleware");
+
 const {
-  getAllUsersController,
-  getAllCoursesController,
+  adminLoginController,
+  adminResetPasswordController,
   deleteCourseController,
   deleteUserController,
+  getAllCoursesController,
+  getAllEnrolledCoursesController,
+  getAllPaymentsController,
+  getAllUsersController,
 } = require("../controllers/adminController");
 
-const checkRole = require("../middlewares/roleMiddleware");
+const {
+  getActivityLogsController,
+} = require("../controllers/activityLogController");
 
 const router = express.Router();
 
-// Admin login route (no auth middleware)
-const { adminLoginController } = require("../controllers/adminController");
 router.post("/login", adminLoginController);
 
+router.get(
+  "/getallusers",
+  authMiddleware,
+  checkRole(["admin"]),
+  getAllUsersController,
+);
 
-router.get("/getallusers", authMiddleware, checkRole(["admin"]), getAllUsersController);
-router.get("/enrolled-courses", authMiddleware, checkRole(["admin"]), require("../controllers/adminController").getAllEnrolledCoursesController);
-router.get("/payments", authMiddleware, checkRole(["admin"]), require("../controllers/adminController").getAllPaymentsController);
+router.get(
+  "/enrolled-courses",
+  authMiddleware,
+  checkRole(["admin"]),
+  getAllEnrolledCoursesController,
+);
 
-router.get("/getallcourses", authMiddleware, checkRole(["admin"]), getAllCoursesController);
+router.get(
+  "/payments",
+  authMiddleware,
+  checkRole(["admin"]),
+  getAllPaymentsController,
+);
 
-router.delete('/deletecourse/:courseid', authMiddleware, checkRole(["admin"]), deleteCourseController)
+router.get(
+  "/activity-logs",
+  authMiddleware,
+  checkRole(["admin"]),
+  getActivityLogsController,
+);
 
-router.delete('/deleteuser/:cuserid', authMiddleware, checkRole(["admin"]), deleteUserController)
+router.get(
+  "/getallcourses",
+  authMiddleware,
+  checkRole(["admin"]),
+  getAllCoursesController,
+);
 
-// Admin reset user password
-router.post('/reset-password/:userid', authMiddleware, checkRole(["admin"]), require("../controllers/adminController").adminResetPasswordController)
+router.delete(
+  "/deletecourse/:courseid",
+  authMiddleware,
+  checkRole(["admin"]),
+  deleteCourseController,
+);
+
+router.delete(
+  "/deleteuser/:cuserid",
+  authMiddleware,
+  checkRole(["admin"]),
+  deleteUserController,
+);
+
+router.post(
+  "/reset-password/:userid",
+  authMiddleware,
+  checkRole(["admin"]),
+  adminResetPasswordController,
+);
 
 module.exports = router;
