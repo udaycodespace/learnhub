@@ -12,6 +12,7 @@ import {
   tableCellClasses,
 } from "@mui/material";
 import axiosInstance from "../common/AxiosInstance";
+import PaymentRecords from "./PaymentRecords";
 import ActivityLogs from "./ActivityLogs";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -77,6 +78,7 @@ const AdminHome = () => {
 
     try {
       const response = await axiosInstance.delete(
+        `api/admin/deleteuser/${userId}`,
         `api/user/deleteuser/${userId}`,
         {
           headers: {
@@ -118,6 +120,16 @@ const AdminHome = () => {
           Users
         </Button>
         <Button
+          variant={activeSection === "payments" ? "contained" : "outlined"}
+          color="inherit"
+          onClick={() => setActiveSection("payments")}
+        >
+          Payments
+        </Button>
+      </nav>
+
+      {activeSection === "payments" ? (
+        <PaymentRecords />
           variant={
             activeSection === "activity-logs" ? "contained" : "outlined"
           }

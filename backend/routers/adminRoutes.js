@@ -15,6 +15,8 @@ const {
 } = require("../controllers/adminController");
 
 const {
+  getAdminPaymentsController,
+} = require("../controllers/paymentRecordsController");
   getActivityLogsController,
 } = require("../controllers/activityLogController");
 
@@ -40,6 +42,25 @@ router.get(
   "/payments",
   authMiddleware,
   checkRole(["admin"]),
+  getAdminPaymentsController,
+);
+
+router.get(
+  "/getallcourses",
+  authMiddleware,
+  checkRole(["admin"]),
+  getAllCoursesController,
+);
+
+router.delete(
+  "/deletecourse/:courseid",
+  authMiddleware,
+  checkRole(["admin"]),
+  deleteCourseController,
+);
+
+router.delete(
+  "/deleteuser/:userid",
   getAllPaymentsController,
 );
 
