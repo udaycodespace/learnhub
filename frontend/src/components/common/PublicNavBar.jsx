@@ -10,7 +10,8 @@ const PublicNavBar = () => {
             <Navbar.Brand href="/" className="landing-brand">
                <span className="landing-brand-mark">L</span>
                <span>
-                  <strong>Learnhub</strong>
+                  <strong>LearnHub</strong>
+                  <small>Skills that move with you</small>
                </span>
             </Navbar.Brand>
             <Navbar.Toggle aria-controls="publicNavbarScroll" />
