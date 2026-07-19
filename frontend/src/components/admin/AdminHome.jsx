@@ -126,13 +126,8 @@ const AdminHome = () => {
         >
           Payments
         </Button>
-      </nav>
-
-      {activeSection === "payments" ? (
-        <PaymentRecords />
-          variant={
-            activeSection === "activity-logs" ? "contained" : "outlined"
-          }
+        <Button
+          variant={activeSection === "activity-logs" ? "contained" : "outlined"}
           color="inherit"
           onClick={() => setActiveSection("activity-logs")}
         >
@@ -140,7 +135,9 @@ const AdminHome = () => {
         </Button>
       </nav>
 
-      {activeSection === "activity-logs" ? (
+      {activeSection === "payments" ? (
+        <PaymentRecords />
+      ) : activeSection === "activity-logs" ? (
         <ActivityLogs />
       ) : (
         <section style={{ padding: "20px" }} aria-labelledby="users-title">
