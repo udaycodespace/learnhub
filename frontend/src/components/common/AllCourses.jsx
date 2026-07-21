@@ -3,6 +3,7 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { MDBCol, MDBInput, MDBRow } from "mdb-react-ui-kit";
 import { Link, useNavigate } from "react-router-dom";
 import { UserContext } from "../../App";
+import CourseRatingBadge from "../reviews/CourseRatingBadge";
 import axiosInstance from "./AxiosInstance";
 
 const paletteByCategory = [
@@ -244,6 +245,10 @@ const AllCourses = () => {
                 <p className="course-description">{descriptionForCourse(course)}</p>
 
                 <div className="course-instructor">
+                  <CourseRatingBadge
+  courseId={course._id}
+  compact
+/>
                   <span className="instructor-avatar" aria-hidden="true">
                     {(course.C_educator || "L").charAt(0).toUpperCase()}
                   </span>

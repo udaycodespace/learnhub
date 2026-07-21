@@ -1,4 +1,4 @@
-// Serve admin dashboard at /api/admin/dashboard
+﻿// Serve admin dashboard at /api/admin/dashboard
 // (Moved below app initialization)
 
 const express = require('express')
@@ -23,7 +23,7 @@ app.use(cors())
 
 
 const uploadsDir = path.join(__dirname, "uploads");
-// Create uploads folder if it doesn’t exist
+// Create uploads folder if it doesnâ€™t exist
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
@@ -49,6 +49,7 @@ app.get('/api/admin', (req, res) => {
 ///ROUTES///
 app.use('/api/admin', require('./routers/adminRoutes'))
 app.use('/api/user', require('./routers/userRoutes'))
+app.use('/api/reviews', require('./routers/courseReviewRoutes'))
 
 
 
