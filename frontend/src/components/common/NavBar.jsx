@@ -60,7 +60,7 @@ const NavBar = ({ setSelectedComponent }) => {
    };
 
    return (
-      <Navbar expand="lg" className="premium-navbar" style={{backdropFilter:'blur(12px) saturate(1.2)', background:'rgba(30,41,59,0.82)', borderRadius:'0 0 18px 18px', boxShadow:'0 4px 24px #00e0ff22'}}>
+      <Navbar expand="lg" className="premium-navbar" style={{backdropFilter:'blur(12px) saturate(1.2)', background:'rgba(30,41,59,0.82)', borderRadius:'0 0 18px 18px', boxShadow:'0 4px 24px #00e0ff22', position:'relative', zIndex: 1040}}>
          <Container fluid>
             <Navbar.Brand>
                <span className="brand-premium"><span className="brand-premium-L">L</span><span style={{color:'#0a2342', fontWeight:'bold'}}>earnhub</span></span>
