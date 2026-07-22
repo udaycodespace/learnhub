@@ -1,0 +1,50 @@
+services:
+  mongodb:
+    image: mongo:8
+
+    ports:
+      - "27017:27017"
+
+    volumes:
+      - mongo-data:/data/db
+  
+  backend:
+    build:
+      context: ./backend
+      
+    container_name: learnhub-backend
+
+    ports:
+      - "5000:5000"
+
+    env_file:
+      - ./backend/.env
+    
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/learnhub
+
+    depends_on:
+      - mongodb
+
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      
+    container_name: learnhub-frontend
+
+    ports:
+      - "5173:5173"
+
+    depends_on:
+      - backend
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  mongo-data:

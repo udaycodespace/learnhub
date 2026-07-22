@@ -262,6 +262,30 @@ After running the seed script, you can log in immediately using these credential
 
 <br/>
 
+## (Alternatively)Running with Docker
+
+### Start all services
+
+```bash
+docker compose up --build
+```
+
+### Stop services
+
+```bash
+docker compose down
+```
+
+### Seed the database
+
+```bash
+docker compose exec backend node seed.js
+```
+
+Frontend: http://localhost:5173
+
+Backend: http://localhost:5000
+
 ## 🛠 Roadmap / Not Yet Implemented
 
 A few things exist in some form but aren't finished yet:
