@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Ask a question
-    url: https://github.com/udaycodespace/learnhub/discussions
-    about: Ask a question or get help using LearnHub.
+  - name: LearnHub Support
+    url: https://discord.gg/22tFSJRG2
+    about: Ask general questions or get help here.

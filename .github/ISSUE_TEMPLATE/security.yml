@@ -1,0 +1,10 @@
+name: Security issue
+description: Report a possible security problem.
+title: "[Security]: "
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not open a public issue for security concerns.
+        Ping me directly on Discord instead.

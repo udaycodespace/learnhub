@@ -1,0 +1,49 @@
+name: Question
+description: Ask a question about the project or setup.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Short description of the question.
+      placeholder: What do you want to ask?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Explain what you were trying to do.
+      placeholder: Give a little background.
+    validations:
+      required: false
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Write the actual question clearly.
+      placeholder: Ask your question here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What I tried
+      description: Mention what you already checked or tried.
+      placeholder: Add steps you already attempted.
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Any extra context or edge cases.
+      placeholder: Add anything else that may help.
+    validations:
+      required: false

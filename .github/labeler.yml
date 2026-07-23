@@ -1,16 +1,64 @@
-# Areas
 frontend:
   - changed-files:
-      - any-glob-to-any-file: 'frontend/**/*'
+      - any-glob-to-any-file:
+          - 'frontend/**/*'
 
 backend:
   - changed-files:
-      - any-glob-to-any-file: 'backend/**/*'
+      - any-glob-to-any-file:
+          - 'backend/**/*'
 
 documentation:
   - changed-files:
-      - any-glob-to-any-file: '**/*.md'
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**/*'
 
 workflows:
   - changed-files:
-      - any-glob-to-any-file: '.github/**/*'
+      - any-glob-to-any-file:
+          - '.github/workflows/**/*'
+          - '.github/labeler.yml'
+
+configuration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.json'
+          - '**/*.yml'
+          - '**/*.yaml'
+          - '**/*.toml'
+          - '**/*.env.example'
+          - '.gitignore'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.test.*'
+          - '**/*.spec.*'
+          - '**/__tests__/**/*'
+
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'backend/config/**/*'
+          - 'backend/schemas/**/*'
+          - 'backend/models/**/*'
+          - 'backend/seed.js'
+
+fullstack:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'frontend/**/*'
+      - any-glob-to-any-file:
+          - 'backend/**/*'
+
+root-files:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'README.md'
+          - 'LICENSE'
+          - 'CONTRIBUTING.md'
+          - 'CODE_OF_CONDUCT.md'
+          - 'SECURITY.md'
+          - 'SUPPORT.md'
+          - 'package.json'

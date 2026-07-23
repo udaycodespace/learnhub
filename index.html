@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LearnHub Contributors Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --panel: #101010;
+      --panel-2: #0d0d0d;
+      --panel-3: #141414;
+      --text: #ffd166;
+      --muted: #8f6b2b;
+      --blue: #6cb2ff;
+      --blue-dim: #24415f;
+      --amber: #ffb000;
+      --amber-soft: rgba(255, 176, 0, 0.14);
+      --line: #2b2416;
+      --error: #ff5c5c;
+      --ok: #76d38b;
+      --shadow-text: 0 0 8px rgba(255, 176, 0, 0.22);
+      --shadow-blue: 0 0 16px rgba(108, 178, 255, 0.12);
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --radius: 0px;
+      --max-width: 1280px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      text-shadow: var(--shadow-text);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.02) 0,
+        rgba(255, 255, 255, 0.02) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+      opacity: 0.18;
+      z-index: 5;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,176,0,0.05), transparent 25%),
+        radial-gradient(circle at 80% 0%, rgba(108,178,255,0.06), transparent 25%);
+      z-index: 1;
+    }
+
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 2;
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+
+    .terminal-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--space-4);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #111, #0c0c0c);
+      padding: var(--space-3) var(--space-4);
+      margin-bottom: var(--space-6);
+      box-shadow: var(--shadow-blue);
+    }
+
+    .terminal-title {
+      color: var(--blue);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .terminal-meta {
+      color: var(--muted);
+      text-align: right;
+      font-size: 0.92rem;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--line);
+      color: var(--blue);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(108, 178, 255, 0.04);
+    }
+
+    .panel-body { padding: var(--space-5); }
+
+    .ascii-logo {
+      color: var(--blue);
+      white-space: pre;
+      font-size: clamp(0.68rem, 1.3vw, 0.95rem);
+      line-height: 1.2;
+      margin-bottom: var(--space-5);
+      text-shadow: 0 0 10px rgba(108, 178, 255, 0.2);
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 4.6rem);
+      line-height: 1.02;
+      text-transform: uppercase;
+      margin-bottom: var(--space-4);
+      max-width: 14ch;
+    }
+
+    .hero h1 .blue { color: var(--blue); text-shadow: var(--shadow-blue); }
+    .prompt {
+      color: var(--blue);
+      margin-bottom: var(--space-2);
+      font-size: 0.95rem;
+    }
+
+    .type-line {
+      color: var(--text);
+      min-height: 2.4em;
+      max-width: 62ch;
+      line-height: 1.7;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 0.65ch;
+      height: 1.1em;
+      vertical-align: -0.18em;
+      background: var(--amber);
+      box-shadow: 0 0 10px rgba(255,176,0,0.6);
+      animation: blink 1s steps(1) infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+
+    .stat-card {
+      border: 1px solid var(--line);
+      background: var(--panel-3);
+      padding: var(--space-4);
+      min-height: 116px;
+    }
+
+    .stat-label {
+      color: var(--blue);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: var(--space-3);
+    }
+
+    .stat-value {
+      font-size: clamp(1.5rem, 4vw, 2.8rem);
+      line-height: 1;
+      margin-bottom: var(--space-2);
+    }
+
+    .stat-sub {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin: var(--space-8) 0 var(--space-4);
+      color: var(--blue);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .section-head small { color: var(--muted); font-size: 0.88rem; }
+
+    .leaderboard {
+      display: grid;
+      grid-template-columns: 1.4fr 0.9fr;
+      gap: var(--space-6);
+      align-items: start;
+    }
+
+    .contributors-list {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .contributor-card {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #111111, #0b0b0b);
+      padding: var(--space-4);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--space-4);
+      align-items: center;
+      position: relative;
+    }
+
+    .rank-pill {
+      min-width: 64px;
+      text-align: center;
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      padding: var(--space-2) var(--space-3);
+      background: var(--amber-soft);
+      font-weight: 800;
+    }
+
+    .contributor-main {
+      display: grid;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .contributor-name-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      align-items: baseline;
+    }
+
+    .contributor-name {
+      font-size: 1.08rem;
+      color: var(--text);
+      text-decoration: none;
+      word-break: break-word;
+    }
+
+    .contributor-login {
+      color: var(--blue);
+      font-size: 0.88rem;
+    }
+
+    .contributor-title {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .bar-wrap {
+      display: grid;
+      gap: var(--space-2);
+    }
+
+    .bar-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-3);
+      font-size: 0.82rem;
+      color: var(--blue);
+      flex-wrap: wrap;
+    }
+
+    .ascii-bar {
+      color: var(--amber);
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .tag {
+      border: 1px dashed var(--blue-dim);
+      color: var(--blue);
+      padding: 4px 8px;
+      font-size: 0.76rem;
+      background: rgba(108, 178, 255, 0.05);
+    }
+
+    .contributor-side {
+      text-align: right;
+      display: grid;
+      gap: var(--space-2);
+      justify-items: end;
+    }
+
+    .xp {
+      font-size: 1.35rem;
+      color: var(--amber);
+    }
+
+    .pr-count,
+    .last-activity {
+      color: var(--muted);
+      font-size: 0.8rem;
+      max-width: 24ch;
+    }
+
+    .feed {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .feed-item {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: var(--space-4);
+    }
+
+    .feed-item h3 {
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: var(--space-2);
+      line-height: 1.45;
+    }
+
+    .feed-meta {
+      color: var(--blue);
+      font-size: 0.82rem;
+      margin-bottom: var(--space-2);
+    }
+
+    .feed-desc {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+
+    .status-line {
+      margin-top: var(--space-8);
+      border-top: 1px dashed var(--line);
+      padding-top: var(--space-4);
+      color: var(--muted);
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+
+    .loading, .empty, .error {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: var(--space-5);
+      color: var(--muted);
+    }
+
+    .error { color: var(--error); }
+
+    a { color: inherit; }
+
+    @media (max-width: 980px) {
+      .hero,
+      .leaderboard {
+        grid-template-columns: 1fr;
+      }
+
+      .contributor-card {
+        grid-template-columns: 1fr;
+      }
+
+      .contributor-side {
+        justify-items: start;
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: var(--space-4); }
+      .stats-grid { grid-template-columns: 1fr; }
+      .terminal-bar,
+      .section-head,
+      .status-line,
+      .bar-meta,
+      .contributor-name-row {
+        display: block;
+      }
+      .terminal-meta,
+      .section-head small { margin-top: var(--space-2); }
+      .rank-pill { width: fit-content; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="wrap">
+    <header class="terminal-bar" aria-label="Terminal header">
+      <div class="terminal-title">learnhub://contributors/leaderboard</div>
+      <div class="terminal-meta">status=[LIVE] mode=[GITHUB_PAGES] theme=[AMBER+BLUE]</div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="panel">
+          <div class="panel-header">
+            <span>system boot</span>
+            <span>$ leaderboard --recent --ranked</span>
+          </div>
+          <div class="panel-body">
+            <div class="ascii-logo" aria-hidden="true"> _                          _   _       _     
+| |    ___  __ _ _ __ _ __ | | | |_   _| |__  
+| |   / _ \/ _` | '__| '_ \| |_| | | | | '_ \ 
+| |__|  __/ (_| | |  | | | |  _  | |_| | |_) |
+|_____\___|\__,_|_|  |_| |_|_| |_|\__,_|_.__/ </div>
+            <p class="prompt">uday@learnhub:~$ cat contributors.json</p>
+            <h1 id="page-title">Contributors <span class="blue">command center</span></h1>
+            <p id="typeLine" class="type-line"></p>
+          </div>
+        </div>
+
+        <aside class="panel" aria-labelledby="quick-stats-title">
+          <div class="panel-header">
+            <span id="quick-stats-title">system stats</span>
+            <span>[OK]</span>
+          </div>
+          <div class="panel-body">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">Total contributors</div>
+                <div class="stat-value" id="totalContributors">--</div>
+                <div class="stat-sub">unique ranked contributors loaded from the repository</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Total XP</div>
+                <div class="stat-value" id="totalXP">--</div>
+                <div class="stat-sub">cumulative XP across the full LearnHub board</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Merged PRs</div>
+                <div class="stat-value" id="totalPRs">--</div>
+                <div class="stat-sub">successful merged contributions powering rank movement</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Top title</div>
+                <div class="stat-value" id="topRankTitle" style="font-size: clamp(1rem, 2.4vw, 1.5rem);">--</div>
+                <div class="stat-sub">highest current rank title detected in the leaderboard</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <div class="section-head">
+        <div>ranked contributors</div>
+        <small>sorted by xp, merged prs, activity order</small>
+      </div>
+
+      <section class="leaderboard" aria-label="Leaderboard layout">
+        <div class="contributors-list panel">
+          <div class="panel-header">
+            <span>leaderboard</span>
+            <span id="boardCount">loading...</span>
+          </div>
+          <div class="panel-body" id="contributorsMount">
+            <div class="loading">Loading contributors.json ...</div>
+          </div>
+        </div>
+
+        <aside class="feed panel">
+          <div class="panel-header">
+            <span>recent merged pr stream</span>
+            <span>[tail -n 8]</span>
+          </div>
+          <div class="panel-body" id="recentPrMount">
+            <div class="loading">Reconstructing recent activity feed ...</div>
+          </div>
+        </aside>
+      </section>
+
+      <footer class="status-line">
+        <span id="sourceStatus">source=[contributors.json]</span>
+        <span id="updatedStatus">last_update=[detecting]</span>
+        <span>deploy=[github pages static mode]</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/three@0.166.1/build/three.min.js"></script>
+  <script>
+    const FALLBACK_CONTRIBUTORS = [
+      {
+        login: "jidnyasa-p",
+        name: "Jidnyasa Patil",
+        profile: "https://github.com/jidnyasa-p",
+        avatarUrl: "https://github.com/jidnyasa-p.png",
+        mergedPRs: 6,
+        commits: 14,
+        reviews: 2,
+        contributionTypes: ["💻 Code", "📖 Docs"],
+        xp: 720,
+        level: 4,
+        rankTitle: "Lecture Guardian",
+        rank: 1,
+        lastMergedAt: "2026-07-22T10:10:00Z"
+      },
+      {
+        login: "teja-311",
+        name: "Teja",
+        profile: "https://github.com/teja-311",
+        avatarUrl: "https://github.com/teja-311.png",
+        mergedPRs: 4,
+        commits: 10,
+        reviews: 1,
+        contributionTypes: ["🎨 Design", "💻 Code"],
+        xp: 520,
+        level: 4,
+        rankTitle: "Lecture Guardian",
+        rank: 2,
+        lastMergedAt: "2026-07-21T09:30:00Z"
+      },
+      {
+        login: "hunter69240",
+        name: "Hunter",
+        profile: "https://github.com/hunter69240",
+        avatarUrl: "https://github.com/hunter69240.png",
+        mergedPRs: 3,
+        commits: 7,
+        reviews: 2,
+        contributionTypes: ["🧪 Tests", "🐛 Bug fix"],
+        xp: 360,
+        level: 3,
+        rankTitle: "Knowledge Builder",
+        rank: 3,
+        lastMergedAt: "2026-07-20T18:10:00Z"
+      },
+      {
+        login: "new-contributor",
+        name: "New Contributor",
+        profile: "https://github.com/new-contributor",
+        avatarUrl: "https://github.com/identicons/new-contributor.png",
+        mergedPRs: 1,
+        commits: 2,
+        reviews: 0,
+        contributionTypes: ["📖 Docs"],
+        xp: 120,
+        level: 2,
+        rankTitle: "Course Crafter",
+        rank: 4,
+        lastMergedAt: "2026-07-19T11:00:00Z"
+      }
+    ];
+
+    const typeText = "Loading live contributor ranks from contributors.json. XP, rank titles, merged PR momentum, and recent movement are rendered in one static GitHub Pages command center.";
+    const typeLine = document.getElementById('typeLine');
+    let typeIndex = 0;
+    function tickType() {
+      typeLine.innerHTML = typeText.slice(0, typeIndex) + '<span class="cursor"></span>';
+      if (typeIndex < typeText.length) {
+        typeIndex += 1;
+        setTimeout(tickType, 18);
+      }
+    }
+    tickType();
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat().format(Number(value || 0));
+    }
+
+    function formatDate(value) {
+      if (!value) return 'unknown';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'unknown';
+      return date.toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function getProgressBar(xp) {
+      const numericXP = Number(xp || 0);
+      const segmentSize = 250;
+      const current = numericXP % segmentSize;
+      const ratio = Math.max(0, Math.min(1, current / segmentSize));
+      const total = 20;
+      const filled = Math.round(ratio * total);
+      return '[' + '█'.repeat(filled) + '·'.repeat(total - filled) + ']';
+    }
+
+    function normalizeContributors(data) {
+      const raw = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.contributors)
+          ? data.contributors
+          : [];
+
+      return raw.map((item, index) => {
+        const mergedPRs = Number(item.mergedPRs || item.merged_prs || item.prs || 0);
+        const xp = Number(item.xp || 0);
+        const level = Number(item.level || 1);
+        const login = item.login || item.username || `contributor-${index + 1}`;
+        const name = item.name || login;
+        const profile = item.profile || item.html_url || `https://github.com/${login}`;
+        const contributionTypes = Array.isArray(item.contributionTypes)
+          ? item.contributionTypes
+          : Array.isArray(item.contributions)
+            ? item.contributions
+            : [];
+
+        return {
+          login,
+          name,
+          profile,
+          avatarUrl: item.avatarUrl || item.avatar_url || `https://github.com/${login}.png`,
+          mergedPRs,
+          commits: Number(item.commits || 0),
+          reviews: Number(item.reviews || 0),
+          contributionTypes,
+          xp,
+          level,
+          rankTitle: item.rankTitle || item.rank_title || 'Rookie Learner',
+          rank: Number(item.rank || index + 1),
+          score: Number(item.score || 0),
+          firstMergedAt: item.firstMergedAt || item.first_merged_at || null,
+          lastMergedAt: item.lastMergedAt || item.last_merged_at || null,
+          latestPRTitle: item.latestPRTitle || item.latest_pr_title || null,
+        };
+      }).sort((a, b) => {
+        if (b.xp !== a.xp) return b.xp - a.xp;
+        if (b.mergedPRs !== a.mergedPRs) return b.mergedPRs - a.mergedPRs;
+        const aTime = a.lastMergedAt ? new Date(a.lastMergedAt).getTime() : 0;
+        const bTime = b.lastMergedAt ? new Date(b.lastMergedAt).getTime() : 0;
+        return bTime - aTime;
+      }).map((item, index) => ({ ...item, rank: index + 1 }));
+    }
+
+    function renderStats(contributors) {
+      const totalXP = contributors.reduce((sum, person) => sum + Number(person.xp || 0), 0);
+      const totalPRs = contributors.reduce((sum, person) => sum + Number(person.mergedPRs || 0), 0);
+      const topRankTitle = contributors[0]?.rankTitle || 'N/A';
+
+      document.getElementById('totalContributors').textContent = formatNumber(contributors.length);
+      document.getElementById('totalXP').textContent = formatNumber(totalXP);
+      document.getElementById('totalPRs').textContent = formatNumber(totalPRs);
+      document.getElementById('topRankTitle').textContent = topRankTitle;
+      document.getElementById('boardCount').textContent = `${contributors.length} loaded`;
+    }
+
+    function renderContributors(contributors) {
+      const mount = document.getElementById('contributorsMount');
+      if (!contributors.length) {
+        mount.innerHTML = '<div class="empty">No contributors found in contributors.json.</div>';
+        return;
+      }
+
+      mount.innerHTML = contributors.map(person => {
+        const tags = (person.contributionTypes || []).slice(0, 2)
+          .map(tag => `<span class="tag">${escapeHtml(tag)}</span>`)
+          .join('');
+
+        return `
+          <article class="contributor-card">
+            <div class="rank-pill">#${person.rank}</div>
+            <div class="contributor-main">
+              <div class="contributor-name-row">
+                <a class="contributor-name" href="${escapeHtml(person.profile)}" target="_blank" rel="noopener noreferrer">${escapeHtml(person.name)}</a>
+                <span class="contributor-login">@${escapeHtml(person.login)}</span>
+                <span class="contributor-title">${escapeHtml(person.rankTitle)} / LVL ${escapeHtml(person.level)}</span>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-meta">
+                  <span>progress_to_next_rank</span>
+                  <span>xp=${formatNumber(person.xp)}</span>
+                </div>
+                <div class="ascii-bar">${getProgressBar(person.xp)}</div>
+              </div>
+              <div class="tags">${tags || '<span class="tag">NO TAGS</span>'}</div>
+            </div>
+            <div class="contributor-side">
+              <div class="xp">XP ${formatNumber(person.xp)}</div>
+              <div class="pr-count">merged_prs=${formatNumber(person.mergedPRs)}</div>
+              <div class="last-activity">last_merge=${escapeHtml(formatDate(person.lastMergedAt))}</div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function buildRecentPRFeed(contributors) {
+      return contributors
+        .filter(person => person.mergedPRs > 0)
+        .slice()
+        .sort((a, b) => {
+          const aTime = a.lastMergedAt ? new Date(a.lastMergedAt).getTime() : 0;
+          const bTime = b.lastMergedAt ? new Date(b.lastMergedAt).getTime() : 0;
+          return bTime - aTime;
+        })
+        .slice(0, 8)
+        .map(person => ({
+          title: person.latestPRTitle || `Merged PR activity by @${person.login}`,
+          author: person.login,
+          rankTitle: person.rankTitle,
+          mergedAt: person.lastMergedAt,
+          summary: `${person.name} currently holds rank #${person.rank} with ${formatNumber(person.xp)} XP and ${formatNumber(person.mergedPRs)} merged PRs.`
+        }));
+    }
+
+    function renderRecentPRs(contributors) {
+      const mount = document.getElementById('recentPrMount');
+      const items = buildRecentPRFeed(contributors);
+      if (!items.length) {
+        mount.innerHTML = '<div class="empty">No recent merged PR activity available yet.</div>';
+        return;
+      }
+
+      mount.innerHTML = items.map(item => `
+        <article class="feed-item">
+          <h3>${escapeHtml(item.title)}</h3>
+          <div class="feed-meta">author=@${escapeHtml(item.author)} · rank=${escapeHtml(item.rankTitle)} · merged=${escapeHtml(formatDate(item.mergedAt))}</div>
+          <p class="feed-desc">${escapeHtml(item.summary)}</p>
+        </article>
+      `).join('');
+    }
+
+    async function loadContributors() {
+      const sourceStatus = document.getElementById('sourceStatus');
+      const updatedStatus = document.getElementById('updatedStatus');
+
+      try {
+        const response = await fetch('./contributors.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        const contributors = normalizeContributors(json);
+        renderStats(contributors);
+        renderContributors(contributors);
+        renderRecentPRs(contributors);
+        sourceStatus.textContent = 'source=[contributors.json loaded]';
+        updatedStatus.textContent = `last_update=[${new Date().toLocaleString()}]`;
+      } catch (error) {
+        const contributors = normalizeContributors(FALLBACK_CONTRIBUTORS);
+        renderStats(contributors);
+        renderContributors(contributors);
+        renderRecentPRs(contributors);
+        sourceStatus.textContent = `source=[fallback demo data]`;
+        updatedStatus.textContent = `last_update=[fallback mode / ${new Date().toLocaleString()}]`;
+      }
+    }
+
+    loadContributors();
+
+    (function initThree() {
+      if (!window.THREE) return;
+      const canvas = document.getElementById('bg-canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 18;
+
+      const geometry = new THREE.BufferGeometry();
+      const starCount = 300;
+      const positions = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i += 3) {
+        positions[i] = (Math.random() - 0.5) * 42;
+        positions[i + 1] = (Math.random() - 0.5) * 24;
+        positions[i + 2] = (Math.random() - 0.5) * 24;
+      }
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+      const material = new THREE.PointsMaterial({
+        color: 0x6cb2ff,
+        size: 0.07,
+        transparent: true,
+        opacity: 0.85
+      });
+
+      const points = new THREE.Points(geometry, material);
+      scene.add(points);
+
+      const grid = new THREE.GridHelper(60, 24, 0xffb000, 0x24415f);
+      grid.position.y = -6;
+      grid.rotation.x = Math.PI / 2.8;
+      scene.add(grid);
+
+      function resize() {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        points.rotation.y += 0.0008;
+        points.rotation.x += 0.0002;
+        grid.rotation.z += 0.0005;
+        renderer.render(scene, camera);
+      }
+
+      resize();
+      animate();
+      window.addEventListener('resize', resize);
+    })();
+  </script>
+</body>
+</html>

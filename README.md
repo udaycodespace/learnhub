@@ -3,13 +3,12 @@
 <br/>
 
 ```
- _                                _   _       _     
-| |                              | | | |     | |    
-| |      ___  __ _ _ __ _ __     | |_| |_   _| |__  
-| |     / _ \/ _` | '__| '_ \    |  _  | | | | '_ \ 
-| |____|  __/ (_| | |  | | | |   | | | | |_| | |_) |
-\_____/ \___|\__,_|_|  |_| |_|   \_| |_/\__,_|_.__/ 
-                                                    
+ _                 _   _       _
+| |               | | | |     | |
+| |     ___  __ _ _ __ _ __   | |_| |_   _| |__
+| |    / _ \/ _` | '__| '_ \  |  _  | | | | '_ \
+| |___|  __/ (_| | |  | | | | | | | | |_| | |_) |
+\_____\___|\__,_|_|  |_| |_|  \_| |_/\__,_|_.__/
 ```
 
 ### A full-stack e-learning platform for video-based courses
@@ -21,29 +20,29 @@
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-v4.4.5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Local_Development-orange?style=for-the-badge)](#-deployment)
+[![Status](https://img.shields.io/badge/Status-Local_Development-orange?style=for-the-badge)](#deployment)
 
 <br/>
 
-> LearnHub is a MERN app where students enroll in video courses, teachers upload lectures, and progress gets tracked along the way.
+> LearnHub is a MERN application where students enroll in video courses, teachers publish lectures, and progress is tracked through the learning flow.
 >
-> 🚧 Only runs locally right now. Haven't picked a host yet, see [Deployment](#-deployment).
+> 🚧 The project is currently available for local development only. Deployment will be decided later.
 
 <br/>
 
-[Features](#-key-features) · [Tech Stack](#-tech-stack) · [Getting Started](#-getting-started) · [Demo Accounts](#-demo-accounts) · [Architecture](#-project-structure) · [Deployment](#-deployment) · [Open Source](#️-open-source-programs) · [License](#-license)
+[Features](#key-features) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started) · [Demo Accounts](#local-seed-accounts) · [Architecture](#project-structure) · [Deployment](#deployment) · [Open Source](#open-source-programs) · [License](#license)
 
 ---
 
 </div>
 
-## 🌟 Overview
+## Overview
 
-LearnHub is a course platform where teachers upload video lectures and students work through them at their own pace. Students enroll, watch content, mark sections complete, and download a PDF certificate once they finish a course. Teachers get their own dashboard to publish courses and check who's enrolled. Admins can view and delete registered users and courses via the React dashboard.
+LearnHub is a course platform where teachers upload video lectures and students learn at their own pace. Students can enroll in courses, watch content, mark progress, and download a PDF certificate after completion.
 
-<br/>
+Teachers get a dashboard to create and manage courses, while admins can view users and remove courses through the React admin interface.
 
-## 🧭 How it fits together
+## How it fits together
 
 ```mermaid
 flowchart LR
@@ -63,146 +62,83 @@ flowchart LR
     K --> L[User Management]
 ```
 
-<br/>
-
-## 🛠 Tech Stack
-
-<div align="center">
+## Tech Stack
 
 ### Backend
 
-| | Technology | Purpose |
-|---|---|---|
-| <img src="https://skillicons.dev/icons?i=express" width="30"/> | **Express.js** | Routes, middleware, and controllers |
-| <img src="https://skillicons.dev/icons?i=mongodb" width="30"/> | **MongoDB** | Stores users, courses, and mock payment records (login activity is recorded but not exposed in the UI) |
-| <img src="https://skillicons.dev/icons?i=nodejs" width="30"/> | **Node.js** | Runs the server |
+| Technology | Purpose |
+|---|---|
+| **Express.js** | Routes, middleware, and controllers |
+| **MongoDB** | Stores users, courses, and mock payment records |
+| **Node.js** | Runs the server |
 
 ### Frontend
 
-| | Technology | Purpose |
-|---|---|---|
-| <img src="https://skillicons.dev/icons?i=react" width="30"/> | **React** | Component-based UI |
-| <img src="https://skillicons.dev/icons?i=mui" width="30"/> | **Material UI** | Tables, dashboard buttons, icons |
-| <img src="https://skillicons.dev/icons?i=bootstrap" width="30"/> | **Bootstrap** | Grid layouts, forms, modals |
+| Technology | Purpose |
+|---|---|
+| **React** | Component-based UI |
+| **Material UI** | Tables, dashboard buttons, icons |
+| **Bootstrap** | Grid layouts, forms, modals |
 
 ### Tooling & DevX
 
-| | Technology | Purpose |
-|---|---|---|
-| <img src="https://skillicons.dev/icons?i=vite" width="30"/> | **Vite** | Dev server and build tool |
-| <img src="https://skillicons.dev/icons?i=postman" width="30"/> | **Axios** | HTTP requests to the backend |
+| Technology | Purpose |
+|---|---|
+| **Vite** | Dev server and build tool |
+| **Axios** | HTTP requests to the backend |
 
-</div>
+## Key Features
 
-<br/>
+### Student
 
-### Stack breakdown
+- Browse and search courses by title or category.
+- Enroll instantly in free courses, or submit mock card details for premium ones.
+- Stream lectures with the built-in video player.
+- Mark sections complete and download a certificate.
 
-```mermaid
-pie showData
-    title Codebase composition (by concern)
-    "Frontend (React/MUI/Bootstrap)" : 45
-    "Backend (Express/Node)" : 30
-    "Database layer (MongoDB/Mongoose)" : 15
-    "Tooling & config" : 10
-```
+### Teacher
 
-<br/>
+- Create courses with title, category, description, and price.
+- Upload lecture videos as `.mp4` files stored locally on the server.
+- Track enrollment numbers for created courses.
+- Delete courses created by the same teacher.
 
-## ✨ Key Features
+### Admin
 
-<table>
-<tr>
-<td width="33%" valign="top">
+- View and manage registered accounts.
+- Remove any course from the platform.
+- View enrollment counts per course.
 
-### 👨‍🎓 Student
-- Browse and search courses by title or category
-- Enroll instantly in free courses, or submit mock card details for premium ones
-- Stream lectures with the built-in video player
-- Mark sections complete and download a certificate
+## Project Structure
 
-</td>
-<td width="33%" valign="top">
-
-### 👩‍🏫 Teacher
-- Create courses with title, category, description, and price
-- Upload lecture videos as `.mp4` files (stored locally on server filesystem)
-- Track enrollment numbers for your own courses
-- Delete courses you created
-
-</td>
-<td width="33%" valign="top">
-
-### 🛡️ Admin
-- View and manage every registered account
-- Remove any course from the platform
-- View enrollment counts per course
-
-</td>
-</tr>
-</table>
-
-<br/>
-
-## 👥 Who does what
-
-```mermaid
-graph TD
-    subgraph Student
-        S1[Browse courses]
-        S2[Mock Enroll & Pay]
-        S3[Watch & track progress]
-        S4[Download certificate]
-    end
-    subgraph Teacher
-        T1[Create course]
-        T2[Upload lectures locally]
-        T3[Monitor enrollments]
-    end
-    subgraph Admin
-        A1[Manage users]
-        A2[Manage courses]
-    end
-```
-
-<br/>
-
-## 📁 Project Structure
-
-```
+```text
 learnhub/
-│
-├── backend/                    # Express API and database models
-│   ├── config/                 # DB connection setup
-│   ├── controllers/            # Controller logic
-│   ├── middlewares/            # Auth and role verification middlewares
-│   ├── routers/                # Express routing files
-│   ├── schemas/                # Mongoose schemas
-│   ├── seed.js                 # Standalone seeding script
+├── backend/
+│   ├── config/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── routers/
+│   ├── schemas/
+│   ├── seed.js
 │   ├── .env
 │   └── package.json
-│
-└── frontend/                   # React SPA powered by Vite
+└── frontend/
     ├── src/
-    │   ├── components/         # UI components (Admin/User/Common)
+    │   ├── components/
     │   ├── App.css
     │   ├── App.jsx
     │   └── main.jsx
     └── package.json
 ```
 
-<br/>
+## Getting Started
 
-## 🚀 Getting Started
-
-No live demo yet, so you'll need to run this locally.
+No live demo yet, so you’ll need to run this locally.
 
 ### Prerequisites
 
-- ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat&logo=node.js&logoColor=white) **Node.js 18+**
-- ![MongoDB](https://img.shields.io/badge/MongoDB-local_or_cloud-47A248?style=flat&logo=mongodb&logoColor=white) **MongoDB**
-
----
+- Node.js 18+
+- MongoDB local or cloud instance
 
 ### 1. Clone & install
 
@@ -216,7 +152,7 @@ cd ../frontend && npm install
 
 ### 2. Configure environment
 
-Copy the example environment file to `.env` and fill in your own values:
+Copy the example environment file to `.env` and fill in your values:
 
 ```bash
 cp backend/.env.example backend/.env
@@ -240,18 +176,16 @@ npm run dev
 
 ### 4. Seed demo data
 
-Run the database seed script to populate roles, courses, and default test accounts:
+Run the seed script to create local users, courses, and sample records:
 
 ```bash
 cd backend
 node seed.js
 ```
 
-<br/>
+## Local Seed Accounts
 
-## 🔑 Demo Accounts
-
-After running the seed script, you can log in immediately using these credentials:
+After running the seed script, you can log in with these local-only development accounts:
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -288,24 +222,15 @@ Backend: http://localhost:5000
 
 ## 🛠 Roadmap / Not Yet Implemented
 
-A few things exist in some form but aren't finished yet:
-- **Real Payment Gateway Integration**: Right now checkout is a mock card form that enrolls the student without charging anything. Payment records (card details, status) get stored in MongoDB and are reachable through a backend API route, but no admin page in the UI reads them yet. Stripe or Razorpay integration is planned.
-- **Admin Activity Log Viewer**: Every login gets logged to MongoDB in an `ActivityLog` collection, but there's no frontend component that displays it. The data's there, the screen for it isn't.
-- **Cloud Video Hosting (Cloudinary)**: Videos are uploaded through Multer and saved locally in `./uploads/` on the server. Cloudinary env vars exist in the config, but the SDK itself isn't wired up yet.
+## Roadmap / Not Yet Implemented
 
-<br/>
+A few things exist in some form but are not finished yet:
 
-## 🪝 Custom Hooks
+- **Real Payment Gateway Integration**: checkout is currently a mock card form. Payment records are stored in MongoDB, but there is no live gateway integration yet.
+- **Admin Activity Log Viewer**: login activity is stored in MongoDB, but the frontend screen for it is still pending.
+- **Cloud Video Hosting (Cloudinary)**: videos are uploaded locally for now. Cloudinary support is planned later.
 
-None yet. If you build one, add it here with a short usage example:
-
-```ts
-// const { hookExports } = useCustomHook();
-```
-
-<br/>
-
-## 📜 Scripts
+## Scripts
 
 ### Backend (`backend/`)
 
@@ -321,21 +246,15 @@ None yet. If you build one, add it here with a short usage example:
 | `npm run build` | Builds the production bundle |
 | `npm run preview` | Previews the production build locally |
 
-<br/>
+## Deployment
 
-## 🌐 Deployment
+Deployment is not configured yet on purpose.
 
-Not deployed yet, on purpose. I'd rather see how the project grows and what contributors actually need before locking in a hosting setup.
+The plan is to decide the hosting setup after the project direction becomes clearer. If you want to suggest a platform — Vercel, Render, Railway, or self-hosted — open a discussion or issue.
 
-If you have thoughts on where this should live — Vercel, Render, Railway, self-hosted, or something else — open a discussion or an issue. That'll shape the decision more than me guessing upfront.
+If you want to help set up CI/CD once the direction is chosen, check `CONTRIBUTING.md`.
 
-Want to help set up CI/CD once a direction is picked? Check [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-<br/>
-
-## ❄️ Open Source Program!
+## Open Source Programs
 
 <table>
 <tr>
@@ -349,21 +268,17 @@ Want to help set up CI/CD once a direction is picked? Check [CONTRIBUTING.md](CO
 </tr>
 </table>
 
-<br/>
+## New to Open Source?
 
-## 🤔 New to Open Source programs/events!
+If you are new to Git and GitHub, these resources may help:
 
-Here are a few articles that will help you get an idea of how to start contributing to open source projects:
-You can refer to the following articles on the basics of Git and Github.
-- [Watch this video to get started, if you have no clue about open source](https://youtu.be/SYtPC9tHYyQ)
+- [Watch this video to get started](https://youtu.be/SYtPC9tHYyQ)
 - [Forking a Repo](https://help.github.com/en/github/getting-started-with-github/fork-a-repo)
 - [Cloning a Repo](https://help.github.com/en/desktop/contributing-to-projects/creating-a-pull-request)
 - [How to create a Pull Request](https://opensource.com/article/19/7/create-pull-request-github)
 - [Getting started with Git and GitHub](https://towardsdatascience.com/getting-started-with-git-and-github-6fcd0f2d4ac6)
 
-<br/>
-
-<h2>🧑‍💻 Project Maintainer</h2>
+## Project Maintainer
 
 <p align="center">
   <img src="https://github.com/udaycodespace.png" width="80px" />
@@ -373,13 +288,9 @@ You can refer to the following articles on the basics of Git and Github.
   Creator & Maintainer of LearnHub
 </p>
 
-<br/>
+## Contributors
 
-## 🤝 Contributors
-
-Contributors who submit PRs will be added to the table below.
-
-<br/>
+Contributors who submit PRs will be added below.
 
 <!-- CONTRIBUTORS-START -->
 <div align="center">
@@ -429,31 +340,19 @@ Contributors who submit PRs will be added to the table below.
 </div>
 <!-- CONTRIBUTORS-END -->
 
-<br/>
+> 💻 Code · 🐛 Bug fix · 🧪 Tests · 🔒 Security · ⚡ Performance · 🎨 Design · 📖 Docs · 🚇 Infrastructure · ♿ Accessibility · 👀 Review
 
-> 💻 Code &nbsp;·&nbsp; 🐛 Bug fix &nbsp;·&nbsp; 🧪 Tests &nbsp;·&nbsp; 🔒 Security &nbsp;·&nbsp; ⚡ Performance &nbsp;·&nbsp; 🎨 Design &nbsp;·&nbsp; 📖 Docs &nbsp;·&nbsp; 🚇 Infrastructure &nbsp;·&nbsp; ♿ Accessibility &nbsp;·&nbsp; 👀 Review
+## License
 
----
-
-## 📄 License
-
-Distributed under the **MIT License**.
-
-See [`LICENSE`](LICENSE) for the full file.
-
----
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for the full text.
 
 <div align="center">
-
-<br/>
 
 **Built as a full-stack e-learning project**
 
 *If this was useful, a ⭐ helps other people find it*
 
-Questions, ideas, or just want to hang out? Join the [Discord](https://discord.gg/EPjNHEkMb).
-
-<br/>
+Need help? See [SUPPORT.md](SUPPORT.md) or join our [Discord](https://discord.gg/22tFSJRG2).
 
 [![Tech](https://skillicons.dev/icons?i=mongodb,express,react,nodejs,mui,bootstrap,vite)](https://skillicons.dev)
 

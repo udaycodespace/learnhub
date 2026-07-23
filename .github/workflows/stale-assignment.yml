@@ -2,11 +2,12 @@ name: Stale Assignment Cleanup
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Run daily at midnight
-  workflow_dispatch: # Enable manual run
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 permissions:
   issues: write
+  contents: read
 
 jobs:
   cleanup:
@@ -18,101 +19,130 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            
-            // Get all open assigned issues
-            const { data: issues } = await github.rest.issues.listForRepo({
+
+            const now = Date.now();
+            const warningLimitMs = 2 * 24 * 60 * 60 * 1000;
+            const unassignLimitMs = 3 * 24 * 60 * 60 * 1000;
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
               repo,
-              state: 'open',
-              assignee: '*'
+              state: "open",
+              assignee: "*",
+              per_page: 100
             });
-            
-            const now = new Date();
-            const warningLimitMs = 5 * 24 * 60 * 60 * 1000; // 5 days
-            const unassignLimitMs = 7 * 24 * 60 * 60 * 1000; // 7 days
-            
+
             for (const issue of issues) {
-              // Ignore PRs
               if (issue.pull_request) continue;
-              
+
               const issueNumber = issue.number;
-              const assignees = issue.assignees.map(a => a.login);
+              const assignees = (issue.assignees || []).map(a => a.login);
               if (assignees.length === 0) continue;
-              const assignee = assignees[0];
-              
-              // Get issue events to find when the assignment occurred
-              const { data: events } = await github.rest.issues.listEvents({
-                owner,
-                repo,
-                issue_number: issueNumber
-              });
-              
-              const assignedEvent = events
-                .filter(e => e.event === 'assigned' && e.assignee.login === assignee)
-                .pop(); // Get the latest assignment event
-                
-              if (!assignedEvent) continue;
-              
-              const assignedAt = new Date(assignedEvent.created_at);
-              const elapsedMs = now - assignedAt;
-              
-              // Check if a PR has already been linked/opened by checking if there's any cross-reference from a PR
-              // or any timeline events indicating a PR link. Alternatively, we check if the assignee has opened
-              // any PR that references this issue number.
-              // For simplicity and safety, we check if the timeline has a cross-referenced PR.
-              const timeline = await github.rest.issues.listEvents({
-                owner,
-                repo,
-                issue_number: issueNumber
-              });
-              
-              const hasLinkedPR = timeline.data.some(event => 
-                event.event === 'cross-referenced' && 
-                event.source && 
-                event.source.type === 'issue' && 
-                event.source.issue.pull_request
-              );
-              
-              if (hasLinkedPR) {
-                console.log(`Issue #${issueNumber} has linked PR. Skipping stale checks.`);
+
+              const labels = (issue.labels || []).map(l => String(l.name || "").toLowerCase());
+              if (labels.includes("pinned-assignment")) {
+                console.log(`Skipping #${issueNumber} because it has pinned-assignment.`);
                 continue;
               }
-              
+
+              const assignee = assignees[0];
+
+              const events = await github.paginate(github.rest.issues.listEvents, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100
+              });
+
+              const latestAssignedEvent = events
+                .filter(event => event.event === "assigned" && event.assignee && event.assignee.login === assignee)
+                .pop();
+
+              if (!latestAssignedEvent) {
+                console.log(`Skipping #${issueNumber} because no matching assignment event was found.`);
+                continue;
+              }
+
+              const assignedAtMs = new Date(latestAssignedEvent.created_at).getTime();
+              const elapsedMs = now - assignedAtMs;
+
+              const timelineEvents = await github.paginate(github.rest.issues.listEvents, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100
+              });
+
+              const hasLinkedPR = timelineEvents.some(event =>
+                event.event === "cross-referenced" &&
+                event.source &&
+                event.source.issue &&
+                event.source.issue.pull_request
+              );
+
+              if (hasLinkedPR) {
+                console.log(`Skipping #${issueNumber} because it already has a linked PR.`);
+                continue;
+              }
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100
+              });
+
+              const warningMarker = "<!-- stale-assignment-warning -->";
+              const hasWarning = comments.some(comment =>
+                String(comment.body || "").includes(warningMarker)
+              );
+
               if (elapsedMs >= unassignLimitMs) {
-                // Auto-unassign
                 await github.rest.issues.removeAssignees({
                   owner,
                   repo,
                   issue_number: issueNumber,
                   assignees: [assignee]
                 });
-                
+
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    name: "assigned"
+                  });
+                } catch (e) {}
+
+                try {
+                  await github.rest.issues.addLabels({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    labels: ["available"]
+                  });
+                } catch (e) {}
+
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: issueNumber,
-                  body: `⚠️ @${assignee}, this issue has been unassigned due to inactivity for 7 days. It is now open for other contributors.`
+                  body: `@${assignee} this issue has been unassigned automatically after 3 days of inactivity with no linked PR. It is now open for other contributors.\n\nIf you still want to work on it, comment again with \`/assign\` and share your approach.`
                 });
-                
-                console.log(`Unassigned @${assignee} from Issue #${issueNumber}`);
-              } else if (elapsedMs >= warningLimitMs) {
-                // Check if a warning comment has already been posted in the last 2 days
-                const { data: comments } = await github.rest.issues.listComments({
+
+                console.log(`Unassigned @${assignee} from issue #${issueNumber}`);
+                continue;
+              }
+
+              if (elapsedMs >= warningLimitMs && !hasWarning) {
+                await github.rest.issues.createComment({
                   owner,
                   repo,
-                  issue_number: issueNumber
+                  issue_number: issueNumber,
+                  body: `${warningMarker}
+                  @${assignee} friendly reminder: this issue has been assigned for 2 days and no linked PR was detected yet. If there is no meaningful progress within 3 days, it may be unassigned automatically.`
                 });
-                
-                const hasWarning = comments.some(c => c.body.includes('warning: this issue has been assigned to you for 5 days'));
-                
-                if (!hasWarning) {
-                  await github.rest.issues.createComment({
-                    owner,
-                    repo,
-                    issue_number: issueNumber,
-                    body: `⏰ Friendly warning: @${assignee}, this issue has been assigned to you for 5 days with no linked PR. You have 2 more days to submit a draft PR or active changes, otherwise it will be automatically unassigned.`
-                  });
-                  console.log(`Sent warning to @${assignee} on Issue #${issueNumber}`);
-                }
+
+                console.log(`Warning sent to @${assignee} on issue #${issueNumber}`);
               }
             }

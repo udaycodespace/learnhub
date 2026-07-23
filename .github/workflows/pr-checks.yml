@@ -2,7 +2,7 @@ name: PR Integrity Checks
 
 on:
   pull_request_target:
-    types: [opened, edited, synchronize]
+    types: [opened, edited, synchronize, reopened]
 
 permissions:
   pull-requests: write
@@ -13,23 +13,25 @@ jobs:
   integrity-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-
-      - name: Run checks
+      - name: Run integrity checks
         uses: actions/github-script@v7
         with:
           script: |
             const pr = context.payload.pull_request;
-            const author = pr.user.login;
+            if (!pr) {
+              core.info("No pull request found in payload. Skipping.");
+              return;
+            }
+
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = pr.number;
-            
-            // Check maintainer role
+            const author = String(pr.user?.login || "");
+            const authorLower = author.toLowerCase();
+            const isFork = Boolean(pr.head?.repo?.fork);
+            const prBody = String(pr.body || "");
+            const labels = (pr.labels || []).map(label => String(label.name || "").toLowerCase());
+
             let isMaintainer = false;
             try {
               const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
@@ -37,114 +39,141 @@ jobs:
                 repo,
                 username: author
               });
-              isMaintainer = ['admin', 'write'].includes(permission.permission);
-            } catch (e) {
-              // Not collaborator
-            }
-            
-            // 1. Security: Auto-close PRs from forks modifying workflow files unless from a maintainer
-            const isFork = pr.head.repo.fork;
-            if (isFork && !isMaintainer) {
-              // Get changed files
-              const { data: files } = await github.rest.pulls.listFiles({
-                owner,
-                repo,
-                pull_number: prNumber
-              });
-              
-              const modifiesWorkflows = files.some(file => file.filename.startsWith('.github/workflows/'));
-              if (modifiesWorkflows) {
+              isMaintainer = ["admin", "write"].includes(permission.permission) || ["admin", "maintain", "write"].includes(permission.role_name);
+            } catch (e) {}
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+
+            const workflowMarker = "<!-- learnhub-workflow-guard -->";
+            const issueLinkMarker = "<!-- learnhub-needs-issue-link -->";
+            const assigneeMarker = "<!-- learnhub-assignee-warning -->";
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: prNumber,
+              per_page: 100
+            });
+
+            const modifiesProtectedAutomation = files.some(file =>
+              file.filename.startsWith(".github/workflows/") ||
+              file.filename.startsWith(".github/scripts/")
+            );
+
+            if (isFork && !isMaintainer && modifiesProtectedAutomation) {
+              const alreadyCommented = comments.some(comment =>
+                String(comment.body || "").includes(workflowMarker)
+              );
+
+              if (!alreadyCommented) {
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: prNumber,
-                  body: `🚨 @${author}, pull requests modifying GitHub actions/workflows from forks are automatically closed for repository security. Maintainers will review and manually implement updates if needed.`
+                  body: `${workflowMarker}
+🚨 @${author}, pull requests from forks that modify repository automation files are closed automatically for security reasons.
+
+This includes:
+- \`.github/workflows/\`
+- \`.github/scripts/\`
+
+A maintainer can review the idea and apply the change manually if needed.`
                 });
-                
-                await github.rest.pulls.update({
+              }
+
+              await github.rest.pulls.update({
+                owner,
+                repo,
+                pull_number: prNumber,
+                state: "closed"
+              });
+
+              core.info(`Closed fork PR #${prNumber} because it modifies protected automation files.`);
+              return;
+            }
+
+            const issueLinkRegex = /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)/ig;
+            const linkedIssueMatches = [...prBody.matchAll(issueLinkRegex)];
+            const linkedIssueNumbers = [...new Set(linkedIssueMatches.map(match => Number(match[1])).filter(Boolean))];
+            const hasIssueLink = linkedIssueNumbers.length > 0;
+
+            if (!hasIssueLink) {
+              if (!labels.includes("needs-issue-link")) {
+                try {
+                  await github.rest.issues.addLabels({
+                    owner,
+                    repo,
+                    issue_number: prNumber,
+                    labels: ["needs-issue-link"]
+                  });
+                } catch (e) {}
+              }
+
+              const alreadyCommented = comments.some(comment =>
+                String(comment.body || "").includes(issueLinkMarker)
+              );
+
+              if (!alreadyCommented) {
+                await github.rest.issues.createComment({
                   owner,
                   repo,
-                  pull_number: prNumber,
-                  state: 'closed'
+                  issue_number: prNumber,
+                  body: `${issueLinkMarker}
+🔍 @${author}, please link an open issue in your pull request description.
+
+Example:
+- \`Closes #123\`
+- \`Fixes #123\`
+
+This is required before review.`
                 });
-                return;
               }
+
+              core.info(`PR #${prNumber} does not have a linked issue.`);
+              return;
             }
-            
-            // 2. Auto-label and comment PRs without linked issues
-            const prBody = pr.body || '';
-            const issueLinkRegex = /(?:close|closes|fix|fixes|resolve|resolves)\s+#\d+/i;
-            const hasIssueLink = issueLinkRegex.test(prBody);
-            
-            if (!hasIssueLink) {
-              // Label the PR
-              await github.rest.issues.addLabels({
+
+            try {
+              await github.rest.issues.removeLabel({
                 owner,
                 repo,
                 issue_number: prNumber,
-                labels: ['needs-issue-link']
+                name: "needs-issue-link"
               });
-              
-              // Comment requesting issue link
-              const comments = await github.rest.issues.listComments({
+            } catch (e) {}
+
+            const linkedIssueNumber = linkedIssueNumbers[0];
+
+            try {
+              const { data: linkedIssue } = await github.rest.issues.get({
                 owner,
                 repo,
-                issue_number: prNumber
+                issue_number: linkedIssueNumber
               });
-              
-              const hasReqComment = comments.data.some(c => c.body.includes('please link an open issue'));
-              if (!hasReqComment) {
+
+              const assignees = (linkedIssue.assignees || []).map(user => String(user.login || "").toLowerCase());
+              const alreadyWarned = comments.some(comment =>
+                String(comment.body || "").includes(assigneeMarker)
+              );
+
+              if (assignees.length > 0 && !assignees.includes(authorLower) && !alreadyWarned) {
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: prNumber,
-                  body: `🔍 @${author}, please link an open issue in your pull request description (e.g. \`Closes #123\`). This is required before we can review your PR.`
+                  body: `${assigneeMarker}
+⚠️ @${author}, you linked issue #${linkedIssueNumber}, but you are not currently assigned to that issue.
+
+Please make sure:
+- the current assignee is okay with this, or
+- you get assigned properly before continuing.`
                 });
               }
-            } else {
-              // Try to remove label if issue link was added later
-              try {
-                await github.rest.issues.removeLabel({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  name: 'needs-issue-link'
-                });
-              } catch (e) {
-                // Label might not exist
-              }
-              
-              // 3. Warning: If author is not assignee of linked issue
-              const issueMatch = prBody.match(/(?:close|closes|fix|fixes|resolve|resolves)\s+#(\d+)/i);
-              if (issueMatch && issueMatch[1]) {
-                const linkedIssueNumber = parseInt(issueMatch[1], 10);
-                try {
-                  const { data: issue } = await github.rest.issues.get({
-                    owner,
-                    repo,
-                    issue_number: linkedIssueNumber
-                  });
-                  
-                  const assignees = issue.assignees.map(a => a.login);
-                  if (!assignees.includes(author)) {
-                    const comments = await github.rest.issues.listComments({
-                      owner,
-                      repo,
-                      issue_number: prNumber
-                    });
-                    
-                    const hasWarning = comments.data.some(c => c.body.includes('Warning: You are submitting a PR for an issue'));
-                    if (!hasWarning) {
-                      await github.rest.issues.createComment({
-                        owner,
-                        repo,
-                        issue_number: prNumber,
-                        body: `⚠️ Warning: You are submitting a PR for issue #${linkedIssueNumber}, but you are not the assigned contributor. Please ensure the assignee is okay with this or wait to be assigned before contributing.`
-                      });
-                    }
-                  }
-                } catch (err) {
-                  console.error('Failed to inspect linked issue:', err);
-                }
-              }
+            } catch (error) {
+              core.warning(`Could not inspect linked issue #${linkedIssueNumber}: ${error.message}`);
             }

@@ -1,28 +1,91 @@
-## Description
+## Summary
 
-Please include a summary of the change, the motivation behind it, and which issue it addresses.
+What does this PR change?
 
-Closes #{ISSUE_NUMBER}
+## Related Issue
 
-## Type of Change
+Closes #
 
-Please delete options that are not relevant and check the ones that apply:
+## What changed?
 
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] ✨ New feature (non-breaking change which adds functionality)
-- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] 📖 Documentation update
+- 
+- 
+- 
+
+## Type
+
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactor
+- [ ] Docs only
+- [ ] Tests
+- [ ] Config / workflow
+- [ ] Security
+- [ ] Breaking change
+
+## Areas touched
+
+- [ ] Frontend
+- [ ] Backend
+- [ ] Database
+- [ ] Docs
+- [ ] Workflow / GitHub Actions
+- [ ] Config / environment
+
+## Testing
+
+- [ ] Tested locally
+- [ ] Build passes
+- [ ] Lint passes
+- [ ] Tests added or updated
+- [ ] Docs only, no runtime testing needed
+
+### Test steps
+
+1. 
+2. 
+3. 
+
+## Screenshots
+
+- [ ] Not needed
+- [ ] Added below
+
+### Before
+
+<!-- Add before screenshot here if applicable -->
+
+### After
+
+<!-- Add after screenshot here if applicable -->
+
+## Edge cases checked
+
+- [ ] Empty or missing data
+- [ ] Loading / slow response
+- [ ] API failure / server error
+- [ ] Rate limit / throttling
+- [ ] Invalid or unexpected input
+- [ ] Permission / access denied
+- [ ] Partial or inconsistent data
+- [ ] Mobile / small screen behavior
+- [ ] Other
+
+### Other edge case details
+
+<!-- Describe here if selected -->
 
 ## Checklist
 
-- [ ] My code follows the style guidelines of this project.
-- [ ] I have performed a self-review of my own code.
-- [ ] I have commented my code, particularly in hard-to-understand areas.
-- [ ] I have made corresponding changes to the documentation.
-- [ ] My changes generate no new warnings or console errors.
-- [ ] I have tested my changes locally and verified they work as expected.
-- [ ] Any dependent changes have been merged and published in downstream modules.
+- [ ] Read `CONTRIBUTING.md`
+- [ ] Linked the issue
+- [ ] Assigned before starting or approved by maintainer
+- [ ] Changes are focused on one issue
+- [ ] No debug logs or unused code
+- [ ] Documentation updated if needed
+- [ ] No new warnings or console errors
+- [ ] Changes are meaningful, not trivial
 
-## Screenshots / Screen Recordings (if applicable)
+## Notes
 
-Please attach screenshots or screen recordings showing the UI changes or behavior before and after.
+Any extra context for reviewers.

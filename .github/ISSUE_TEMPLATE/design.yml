@@ -1,0 +1,58 @@
+name: Design issue
+description: Report a UI, UX, layout, accessibility, or visual design issue.
+title: "[Design]: "
+labels: ["design"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Short description of the design issue.
+      placeholder: What looks wrong or needs improvement?
+    validations:
+      required: true
+
+  - type: input
+    id: area
+    attributes:
+      label: Affected page or component
+      description: Which screen, section, or component is affected?
+      placeholder: Example: Course card, login page, navbar
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is the issue?
+      description: Describe the UI, UX, layout, responsiveness, or accessibility problem.
+      placeholder: Explain the problem clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What should the design or behavior look like instead?
+      placeholder: Describe the expected experience.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / references
+      description: Add screenshots, recordings, or reference links if available.
+      placeholder: Paste links or attach images here.
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Any extra context, edge cases, or suggestions.
+      placeholder: Add anything else that may help.
+    validations:
+      required: false

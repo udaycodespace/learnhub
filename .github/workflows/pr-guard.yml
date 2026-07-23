@@ -1,0 +1,160 @@
+name: PR Guard
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  guard-small-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR size and rules
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info("No pull request found in payload. Skipping.");
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const excludedLogins = new Set(["udaycodespace"]);
+            const trustedLogins = new Set(["udaycodespace"]);
+            const bypassLabels = new Set(["approved-small-pr"]);
+
+            const authorLogin = String(pr.user?.login || "").toLowerCase().trim();
+            const authorType = String(pr.user?.type || "");
+            const prNumber = pr.number;
+            const additions = Number(pr.additions || 0);
+            const deletions = Number(pr.deletions || 0);
+            const changedFiles = Number(pr.changed_files || 0);
+            const changedLines = additions + deletions;
+            const labels = (pr.labels || []).map(label => String(label.name || "").toLowerCase().trim());
+            const state = String(pr.state || "").toLowerCase();
+            const isDraft = Boolean(pr.draft);
+            const isMerged = Boolean(pr.merged);
+            const isBot =
+              authorType === "Bot" ||
+              authorLogin.endsWith("[bot]") ||
+              authorLogin === "github-actions";
+
+            if (!authorLogin) {
+              core.info("Missing author login. Skipping.");
+              return;
+            }
+
+            if (state !== "open") {
+              core.info(`PR #${prNumber} is not open. Skipping.`);
+              return;
+            }
+
+            if (isMerged) {
+              core.info(`PR #${prNumber} is already merged. Skipping.`);
+              return;
+            }
+
+            if (isBot) {
+              core.info(`PR #${prNumber} is from a bot (${authorLogin}). Skipping.`);
+              return;
+            }
+
+            if (excludedLogins.has(authorLogin)) {
+              core.info(`PR #${prNumber} is from excluded login ${authorLogin}. Skipping.`);
+              return;
+            }
+
+            if (trustedLogins.has(authorLogin)) {
+              core.info(`PR #${prNumber} is from trusted login ${authorLogin}. Skipping.`);
+              return;
+            }
+
+            if (labels.some(label => bypassLabels.has(label))) {
+              core.info(`PR #${prNumber} has bypass label. Skipping.`);
+              return;
+            }
+
+            if (isDraft) {
+              core.info(`PR #${prNumber} is a draft. Skipping.`);
+              return;
+            }
+
+            const minimumChangedLines = 20;
+            if (changedLines >= minimumChangedLines) {
+              core.info(`PR #${prNumber} passed size rule: additions=${additions}, deletions=${deletions}, total=${changedLines}, files=${changedFiles}.`);
+              return;
+            }
+
+            const marker = "<!-- learnhub-pr-guard -->";
+            const existingComments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+
+            const alreadyCommented = existingComments.some(comment =>
+              String(comment.body || "").includes(marker)
+            );
+
+            const body = `${marker}
+Hi @${pr.user.login}, thanks for raising this PR.
+
+The change looks valid, but I had to close this PR because it does not currently follow our contribution rules.
+
+Please make sure:
+- the PR follows \`CONTRIBUTING.md\`
+- the contribution is meaningful and properly scoped
+- the PR has at least **20 changed lines** in total, unless it is pre-approved
+- if this is a valid smaller change, ask for the \`approved-small-pr\` label first
+
+Current PR stats:
+- Additions: ${additions}
+- Deletions: ${deletions}
+- Total changed lines: ${changedLines}
+- Changed files: ${changedFiles}
+
+You can update the branch and open a new PR after following the guidelines.`;
+
+            if (!alreadyCommented) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body
+              });
+              core.info(`Posted policy comment on PR #${prNumber}.`);
+            } else {
+              core.info(`Policy comment already exists on PR #${prNumber}.`);
+            }
+
+            const closeLabel = "auto-closed-small-pr";
+            if (!labels.includes(closeLabel)) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  labels: [closeLabel]
+                });
+                core.info(`Added label ${closeLabel} to PR #${prNumber}.`);
+              } catch (error) {
+                core.warning(`Could not add label: ${error.message}`);
+              }
+            }
+
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number: prNumber,
+              state: "closed"
+            });
+
+            core.info(`Closed PR #${prNumber} because changedLines=${changedLines} < ${minimumChangedLines}.`);

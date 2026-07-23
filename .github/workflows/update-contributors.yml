@@ -27,19 +27,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
-      - name: Update README Contributors
+      - name: Update README and contributors leaderboard
         env:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_DEFAULT_BRANCH: main
         run: node .github/scripts/update-contributors.js
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: update contributors in README [skip ci]"
-          file_pattern: "README.md"
+          commit_message: "docs: update contributors leaderboard [skip ci]"
+          file_pattern: "README.md contributors.json"
           branch: main
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"

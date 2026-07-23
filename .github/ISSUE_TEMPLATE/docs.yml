@@ -1,0 +1,49 @@
+name: Documentation update
+description: Report a docs issue or suggest a docs change.
+title: "[Docs]: "
+labels: ["docs"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Short description of the documentation change.
+      placeholder: What needs to be changed?
+    validations:
+      required: true
+
+  - type: input
+    id: file
+    attributes:
+      label: File or page
+      description: Which file or page should be updated?
+      placeholder: Example: README.md
+    validations:
+      required: false
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is wrong?
+      description: Explain the problem in the current docs.
+      placeholder: What is missing, unclear, or outdated?
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested change
+      description: What should be updated?
+      placeholder: Describe the fix or improvement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Any extra context or edge cases.
+      placeholder: Add anything else that may help.
+    validations:
+      required: false

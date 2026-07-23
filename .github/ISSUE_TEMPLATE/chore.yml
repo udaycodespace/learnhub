@@ -1,0 +1,47 @@
+name: Chore / maintenance
+description: Report cleanup, config, refactor, or maintenance work.
+title: "[Chore]: "
+labels: ["chore"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Short description of the task.
+      placeholder: What needs to be done?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the project is affected?
+      options:
+        - Frontend
+        - Backend
+        - Database
+        - Docs
+        - Workflow / GitHub Actions
+        - Config / environment
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Explain the cleanup, refactor, or maintenance work.
+      placeholder: Describe the task clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Any extra context or edge cases.
+      placeholder: Add anything else that may help.
+    validations:
+      required: false
