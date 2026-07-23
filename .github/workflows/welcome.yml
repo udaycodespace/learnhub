@@ -22,6 +22,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const { context, github } = require("@actions/github");
+
             const issue = context.payload.issue;
 
             await github.rest.issues.createComment({
@@ -30,7 +32,7 @@ jobs:
               issue_number: issue.number,
               body: `👋 Welcome to LearnHub, @${issue.user.login}! Thanks for opening this issue.
 
-Please review our [Contributing Guidelines](https://github.com/udaycodespace/learnhub/blob/main/CONTRIBUTING.md) and [Code of Conduct](https://github.com/udaycodespace/learnhub/blob/main/CODE_OF_CONDUCT.md).
+Please review our Contributing Guidelines (CONTRIBUTING.md) and Code of Conduct (CODE_OF_CONDUCT.md).
 
 ### Checklist
 - [ ] Star the repository
@@ -48,6 +50,8 @@ If you do not get a reply in time, please join Discord and message there with yo
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const { context, github } = require("@actions/github");
+
             const pr = context.payload.pull_request;
 
             await github.rest.issues.createComment({
@@ -65,5 +69,5 @@ PA will review it shortly. If you do not hear back in time, please join Discord 
 - [ ] Make sure the PR is linked to the relevant issue
 - [ ] Make sure the PR follows the contribution rules
 
-Please make sure your PR follows our [Contributing Guidelines](https://github.com/udaycodespace/learnhub/blob/main/CONTRIBUTING.md).`
+Please make sure your PR follows our Contributing Guidelines (CONTRIBUTING.md).`
             });
