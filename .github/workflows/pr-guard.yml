@@ -20,6 +20,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const core = require("@actions/core");
+            const { context, github } = require("@actions/github");
+
             const pr = context.payload.pull_request;
             if (!pr) {
               core.info("No pull request found in payload. Skipping.");
@@ -86,7 +89,9 @@ jobs:
 
             const minimumChangedLines = 20;
             if (changedLines >= minimumChangedLines) {
-              core.info(`PR #${prNumber} passed size rule: additions=${additions}, deletions=${deletions}, total=${changedLines}, files=${changedFiles}.`);
+              core.info(
+                `PR #${prNumber} passed size rule: additions=${additions}, deletions=${deletions}, total=${changedLines}, files=${changedFiles}.`
+              );
               return;
             }
 
@@ -104,24 +109,26 @@ jobs:
               String(comment.body || "").includes(marker)
             );
 
-            const body = `${marker}
-Hi @${pr.user.login}, thanks for raising this PR.
+            const intro =
+              `${marker}\n` +
+              `Hi @${pr.user.login}, thanks for raising this PR.\n\n`;
+            const explanation =
+              `The change looks valid, but this PR was closed because it does not currently follow our contribution rules.\n\n` +
+              `Please make sure:\n` +
+              `- the PR follows \`CONTRIBUTING.md\`\n` +
+              `- the contribution is meaningful and properly scoped\n` +
+              `- the PR has at least **20 changed lines** in total, unless it is pre-approved\n` +
+              `- if this is a valid smaller change, ask for the \`approved-small-pr\` label first\n\n`;
+            const stats =
+              `Current PR stats:\n` +
+              `- Additions: ${additions}\n` +
+              `- Deletions: ${deletions}\n` +
+              `- Total changed lines: ${changedLines}\n` +
+              `- Changed files: ${changedFiles}\n\n`;
+            const nextSteps =
+              `You can update the branch and open a new PR after following the guidelines.\n`;
 
-The change looks valid, but this PR was closed because it does not currently follow our contribution rules.
-
-Please make sure:
-- the PR follows \`CONTRIBUTING.md\`
-- the contribution is meaningful and properly scoped
-- the PR has at least **20 changed lines** in total, unless it is pre-approved
-- if this is a valid smaller change, ask for the \`approved-small-pr\` label first
-
-Current PR stats:
-- Additions: ${additions}
-- Deletions: ${deletions}
-- Total changed lines: ${changedLines}
-- Changed files: ${changedFiles}
-
-You can update the branch and open a new PR after following the guidelines.`;
+            const body = intro + explanation + stats + nextSteps;
 
             if (!alreadyCommented) {
               await github.rest.issues.createComment({
@@ -156,4 +163,6 @@ You can update the branch and open a new PR after following the guidelines.`;
               state: "closed"
             });
 
-            core.info(`Closed PR #${prNumber} because changedLines=${changedLines} < ${minimumChangedLines}.`);
+            core.info(
+              `Closed PR #${prNumber} because changedLines=${changedLines} < ${minimumChangedLines}.`
+            );

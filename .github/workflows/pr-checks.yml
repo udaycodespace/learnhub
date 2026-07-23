@@ -20,6 +20,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const core = require("@actions/core");
+            const { context, github } = require("@actions/github");
+
             const pr = context.payload.pull_request;
             if (!pr) {
               core.info("No pull request found in payload. Skipping.");
@@ -71,24 +74,26 @@ jobs:
               file.filename.startsWith(".github/scripts/")
             );
 
+            // 1. Fork PR modifying automation -> close
             if (isFork && !isMaintainer && modifiesProtectedAutomation) {
               const alreadyCommented = comments.some(comment =>
                 String(comment.body || "").includes(workflowMarker)
               );
 
               if (!alreadyCommented) {
+                const workflowBody =
+                  `${workflowMarker}\n` +
+                  `🚨 @${author}, pull requests from forks that modify repository automation files are closed automatically for security reasons.\n\n` +
+                  `This includes:\n` +
+                  `- \`.github/workflows/\`\n` +
+                  `- \`.github/scripts/\`\n\n` +
+                  `A maintainer can review the idea and apply the change manually if needed.\n`;
+
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: prNumber,
-                  body: `${workflowMarker}
-🚨 @${author}, pull requests from forks that modify repository automation files are closed automatically for security reasons.
-
-This includes:
-- \`.github/workflows/\`
-- \`.github/scripts/\`
-
-A maintainer can review the idea and apply the change manually if needed.`
+                  body: workflowBody
                 });
               }
 
@@ -103,6 +108,7 @@ A maintainer can review the idea and apply the change manually if needed.`
               return;
             }
 
+            // 2. Check for linked issue in PR body
             const issueLinkRegex = /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)/ig;
             const linkedIssueMatches = [...prBody.matchAll(issueLinkRegex)];
             const linkedIssueNumbers = [...new Set(linkedIssueMatches.map(match => Number(match[1])).filter(Boolean))];
@@ -125,18 +131,19 @@ A maintainer can review the idea and apply the change manually if needed.`
               );
 
               if (!alreadyCommented) {
+                const issueLinkBody =
+                  `${issueLinkMarker}\n` +
+                  `🔍 @${author}, please link an open issue in your pull request description.\n\n` +
+                  `Example:\n` +
+                  `- \`Closes #123\`\n` +
+                  `- \`Fixes #123\`\n\n` +
+                  `This is required before review.\n`;
+
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: prNumber,
-                  body: `${issueLinkMarker}
-🔍 @${author}, please link an open issue in your pull request description.
-
-Example:
-- \`Closes #123\`
-- \`Fixes #123\`
-
-This is required before review.`
+                  body: issueLinkBody
                 });
               }
 
@@ -144,6 +151,7 @@ This is required before review.`
               return;
             }
 
+            // Has issue link -> remove needs-issue-link
             try {
               await github.rest.issues.removeLabel({
                 owner,
@@ -155,6 +163,7 @@ This is required before review.`
 
             const linkedIssueNumber = linkedIssueNumbers[0];
 
+            // 3. Check assignee on linked issue
             try {
               const { data: linkedIssue } = await github.rest.issues.get({
                 owner,
@@ -162,22 +171,27 @@ This is required before review.`
                 issue_number: linkedIssueNumber
               });
 
-              const assignees = (linkedIssue.assignees || []).map(user => String(user.login || "").toLowerCase());
+              const assignees = (linkedIssue.assignees || []).map(
+                user => String(user.login || "").toLowerCase()
+              );
+
               const alreadyWarned = comments.some(comment =>
                 String(comment.body || "").includes(assigneeMarker)
               );
 
               if (assignees.length > 0 && !assignees.includes(authorLower) && !alreadyWarned) {
+                const assigneeBody =
+                  `${assigneeMarker}\n` +
+                  `⚠️ @${author}, you linked issue #${linkedIssueNumber}, but you are not currently assigned to that issue.\n\n` +
+                  `Please make sure:\n` +
+                  `- the current assignee is okay with this, or\n` +
+                  `- you get assigned properly before continuing.\n`;
+
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: prNumber,
-                  body: `${assigneeMarker}
-⚠️ @${author}, you linked issue #${linkedIssueNumber}, but you are not currently assigned to that issue.
-
-Please make sure:
-- the current assignee is okay with this, or
-- you get assigned properly before continuing.`
+                  body: assigneeBody
                 });
               }
             } catch (error) {

@@ -57,21 +57,23 @@ jobs:
               return;
             }
 
-            const body = `${marker}
-👋 Hi @${assignee.login}, you have been assigned to this issue by @${assigner?.login || "a maintainer"}.
+            const intro =
+              `👋 Hi @${assignee.login}, you have been assigned to this issue by @${assigner?.login || "a maintainer"}.\n\n`;
+            const checklist =
+              `Welcome to LearnHub. Please make sure you:\n` +
+              `- Star the repository\n` +
+              `- Fork the repository\n` +
+              `- Read \`CONTRIBUTING.md\`\n` +
+              `- Read \`CODE_OF_CONDUCT.md\`\n` +
+              `- Understand the issue clearly before starting\n\n`;
+            const timing =
+              `Please share meaningful progress within 3 days, or the issue may be reassigned.\n\n`;
+            const support =
+              `If you need help or may be delayed, please ping @udaycodespace or join Discord and message there with your GitHub username.\n\n`;
+            const note =
+              `Note: PRs with fewer than 20 lines are not accepted.\n`;
 
-Welcome to LearnHub. Please make sure you:
-- Star the repository
-- Fork the repository
-- Read \`CONTRIBUTING.md\`
-- Read \`CODE_OF_CONDUCT.md\`
-- Understand the issue clearly before starting
-
-Please share meaningful progress within 3 days, or the issue may be reassigned.
-
-If you need help or may be delayed, please ping @udaycodespace or join Discord and message there with your GitHub username.
-
-Note: PRs with fewer than 20 lines are not accepted.`;
+            const body = `${marker}\n${intro}${checklist}${timing}${support}${note}`;
 
             await github.rest.issues.createComment({
               owner,
@@ -124,7 +126,6 @@ Note: PRs with fewer than 20 lines are not accepted.`;
               return;
             }
 
-            // Helper: check if commenter is maintainer
             async function isMaintainer(username) {
               try {
                 const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
@@ -141,13 +142,11 @@ Note: PRs with fewer than 20 lines are not accepted.`;
               }
             }
 
-            // Helper: current assignees
             const currentAssignees = (issue.assignees || []).map(a => a.login);
             const lowerCurrentAssignees = currentAssignees.map(login => login.toLowerCase());
             const commenterLower = commenter.toLowerCase();
             const issueAuthorLower = issueAuthor.toLowerCase();
 
-            // Helper: 2-open-issue limit
             async function hasTooManyOpenAssignments(username) {
               const { data: assignedItems } = await github.rest.issues.listForRepo({
                 owner,
@@ -160,16 +159,18 @@ Note: PRs with fewer than 20 lines are not accepted.`;
               return assignedOpenIssuesOnly.length >= 2;
             }
 
+            const limitBody =
+              `Easy there, legend — @${commenter} already has 2 open issues. Finish one first and let others cook too.\n`;
+
             async function replyLimit(username) {
               await github.rest.issues.createComment({
                 owner,
                 repo,
                 issue_number: issueNumber,
-                body: `Easy there, legend — @${username} already has 2 open issues. Finish one first and let others cook too.`
+                body: limitBody.replace(commenter, username)
               });
             }
 
-            // Sticky queue state comment helpers
             const QUEUE_MARKER = "<!-- learnhub-queue-state";
 
             async function getQueueComment() {
@@ -243,7 +244,7 @@ last_progress_at: ${state.last_progress_at || ""}
             const commenterIsMaintainer = await isMaintainer(commenter);
             const isSelfIssue = commenterLower === issueAuthorLower;
 
-            // COMMAND: /assign (self or @someone)
+            // /assign (self or @someone)
             if (isAssignCommand) {
               const rawArg = (assignMatch[1] || "").trim();
               const isForceAssign = /^@([a-zA-Z0-9-]+)$/i.test(rawArg);
@@ -279,7 +280,6 @@ last_progress_at: ${state.last_progress_at || ""}
 
                 const isAlreadyPrimary = queueState.primary.toLowerCase() === targetUser.toLowerCase();
 
-                // Remove existing assignees if primary changing
                 if (!isAlreadyPrimary && currentAssignees.length > 0) {
                   await github.rest.issues.removeAssignees({
                     owner,
@@ -333,11 +333,14 @@ last_progress_at: ${state.last_progress_at || ""}
                   });
                 } catch (e) {}
 
+                const forceBody =
+                  `🎯 @${targetUser} has been assigned to this issue by a maintainer. Please share meaningful progress within 3 days, or it may be opened to others.\n`;
+
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: issueNumber,
-                  body: `🎯 @${targetUser} has been assigned to this issue by a maintainer. Please share meaningful progress within 3 days, or it may be opened to others.`
+                  body: forceBody
                 });
 
                 return;
@@ -352,7 +355,6 @@ last_progress_at: ${state.last_progress_at || ""}
               const hasPrimaryAssignee = currentAssignees.length > 0;
 
               if (!hasPrimaryAssignee) {
-                // Assign commenter as primary
                 if (!lowerCurrentAssignees.includes(commenterLower)) {
                   await github.rest.issues.addAssignees({
                     owner,
@@ -397,31 +399,29 @@ last_progress_at: ${state.last_progress_at || ""}
                   });
                 } catch (e) {}
 
-                const isAuthor = isSelfIssue;
-                const welcomeBody = isAuthor
-                  ? `🎉 @${commenter} has been assigned to this issue. Welcome to LearnHub.
+                const authorWelcome =
+                  `🎉 @${commenter} has been assigned to this issue. Welcome to LearnHub.\n\n` +
+                  `Hope you do well on this issue. Please make sure you:\n` +
+                  `- Star the repository\n` +
+                  `- Fork the repository\n` +
+                  `- Read \`CONTRIBUTING.md\`\n` +
+                  `- Read \`CODE_OF_CONDUCT.md\`\n` +
+                  `- Understand the issue clearly before starting\n` +
+                  `- Share meaningful progress within 3 days\n\n` +
+                  `If you need help or may be delayed, please ping @udaycodespace.\n\n` +
+                  `Note: PRs with fewer than 20 lines are not accepted.\n`;
 
-Hope you do well on this issue. Please make sure you:
-- Star the repository
-- Fork the repository
-- Read \`CONTRIBUTING.md\`
-- Read \`CODE_OF_CONDUCT.md\`
-- Understand the issue clearly before starting
-- Share meaningful progress within 3 days
+                const nonAuthorWelcome =
+                  `🎉 @${commenter} has been assigned to this issue. Welcome to LearnHub.\n\n` +
+                  `Please make sure you:\n` +
+                  `- Star the repository\n` +
+                  `- Fork the repository\n` +
+                  `- Read \`CONTRIBUTING.md\`\n` +
+                  `- Read \`CODE_OF_CONDUCT.md\`\n` +
+                  `- Understand the issue clearly before starting\n\n` +
+                  `Please share meaningful progress within 3 days, or it may be made available to others.\n`;
 
-If you need help or may be delayed, please ping @udaycodespace.
-
-Note: PRs with fewer than 20 lines are not accepted.`
-                  : `🎉 @${commenter} has been assigned to this issue. Welcome to LearnHub.
-
-Please make sure you:
-- Star the repository
-- Fork the repository
-- Read \`CONTRIBUTING.md\`
-- Read \`CODE_OF_CONDUCT.md\`
-- Understand the issue clearly before starting
-
-Please share meaningful progress within 3 days, or it may be made available to others.`;
+                const welcomeBody = isSelfIssue ? authorWelcome : nonAuthorWelcome;
 
                 await github.rest.issues.createComment({
                   owner,
@@ -431,7 +431,6 @@ Please share meaningful progress within 3 days, or it may be made available to o
                 });
 
               } else {
-                // Already assigned
                 if (lowerCurrentAssignees.includes(commenterLower)) {
                   await github.rest.issues.createComment({
                     owner,
@@ -441,13 +440,16 @@ Please share meaningful progress within 3 days, or it may be made available to o
                   });
                 } else {
                   const primary = currentAssignees[0];
+                  const alreadyBody =
+                    `@${commenter}, first priority for this issue is with @${primary}.\n\n` +
+                    `If you’d like to be next in queue, please use \`/work <approach>\` and describe how you plan to solve it. ` +
+                    `After the 3-day window, you may be auto-promoted if there is no meaningful progress from the primary assignee.\n`;
+
                   await github.rest.issues.createComment({
                     owner,
                     repo,
                     issue_number: issueNumber,
-                    body: `@${commenter}, first priority for this issue is with @${primary}. 
-
-If you’d like to be next in queue, please use \`/work <approach>\` and describe how you plan to solve it. After the 3-day window, you may be auto-promoted if there is no meaningful progress from the primary assignee.`
+                    body: alreadyBody
                   });
                 }
               }
@@ -455,7 +457,7 @@ If you’d like to be next in queue, please use \`/work <approach>\` and describ
               return;
             }
 
-            // COMMAND: /work <approach> (backup claim)
+            // /work <approach>
             if (isWorkCommand) {
               if (issue.pull_request) {
                 await github.rest.issues.createComment({
@@ -505,20 +507,20 @@ If you’d like to be next in queue, please use \`/work <approach>\` and describ
                   body: buildQueueBody(queueState)
                 });
 
+                const workBody =
+                  `@${commenter}, first priority is with @${primary}. You are now next in the queue for this issue with the following approach:\n\n` +
+                  `\`${approach}\`\n\n` +
+                  `Please make sure you:\n` +
+                  `- Star the repository\n` +
+                  `- Fork the repository\n` +
+                  `- Understand the issue clearly\n\n` +
+                  `If @${primary} doesn’t show meaningful progress within 3 days, you may be auto-promoted to primary assignee.\n`;
+
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: issueNumber,
-                  body: `@${commenter}, first priority is with @${primary}. You are now next in the queue for this issue with the following approach:
-
-\`${approach}\`
-
-Please make sure you:
-- Star the repository
-- Fork the repository
-- Understand the issue clearly
-
-If @${primary} doesn’t show meaningful progress within 3 days, you may be auto-promoted to primary assignee.`
+                  body: workBody
                 });
               } else if (queueState.backup.toLowerCase() === commenterLower) {
                 await github.rest.issues.createComment({
@@ -539,7 +541,7 @@ If @${primary} doesn’t show meaningful progress within 3 days, you may be auto
               return;
             }
 
-            // COMMAND: /unassign
+            // /unassign
             if (isUnassignCommand) {
               const isPrimary = lowerCurrentAssignees.includes(commenterLower);
 
@@ -572,7 +574,6 @@ If @${primary} doesn’t show meaningful progress within 3 days, you may be auto
                 assignees: usersToRemove
               });
 
-              // Reset queue completely on unassign
               queueState.primary = "";
               queueState.primary_assigned_at = "";
               queueState.backup = "";
@@ -715,7 +716,6 @@ last_progress_at: ${state.last_progress_at || ""}
                 continue;
               }
 
-              // Promote backup
               const currentAssignees = (issue.assignees || []).map(a => a.login);
               if (currentAssignees.length > 0) {
                 await github.rest.issues.removeAssignees({
@@ -756,16 +756,18 @@ last_progress_at: ${state.last_progress_at || ""}
                 });
               } catch (e) {}
 
+              const promotionBody =
+                `⏳ The primary claimant did not show enough progress in 3 days. @${backup} is now the new priority assignee for this issue.\n\n` +
+                `Please:\n` +
+                `- Star the repository\n` +
+                `- Fork the repository\n` +
+                `- Understand the issue clearly\n` +
+                `- Share meaningful progress as soon as you can.\n`;
+
               await github.rest.issues.createComment({
                 owner,
                 repo,
                 issue_number: issueNumber,
-                body: `⏳ The primary claimant did not show enough progress in 3 days. @${backup} is now the new priority assignee for this issue.
-
-Please:
-- Star the repository
-- Fork the repository
-- Understand the issue clearly
-- Share meaningful progress as soon as you can.`
+                body: promotionBody
               });
             }

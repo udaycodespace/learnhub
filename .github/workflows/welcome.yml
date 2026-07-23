@@ -26,22 +26,22 @@ jobs:
 
             const issue = context.payload.issue;
 
+            const body =
+              `👋 Welcome to LearnHub, @${issue.user.login}! Thanks for opening this issue.\n\n` +
+              `Please review our Contributing Guidelines (CONTRIBUTING.md) and Code of Conduct (CODE_OF_CONDUCT.md).\n\n` +
+              `### Checklist\n` +
+              `- [ ] Star the repository\n` +
+              `- [ ] Fork the repository\n` +
+              `- [ ] Read \`CONTRIBUTING.md\`\n` +
+              `- [ ] Comment \`/assign\` if you want to work on this issue\n` +
+              `- [ ] If you are not the issue author, add your approach along with \`/assign\`\n\n` +
+              `If you do not get a reply in time, please join Discord and message there with your GitHub username.`;
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue.number,
-              body: `👋 Welcome to LearnHub, @${issue.user.login}! Thanks for opening this issue.
-
-Please review our Contributing Guidelines (CONTRIBUTING.md) and Code of Conduct (CODE_OF_CONDUCT.md).
-
-### Checklist
-- [ ] Star the repository
-- [ ] Fork the repository
-- [ ] Read \`CONTRIBUTING.md\`
-- [ ] Comment \`/assign\` if you want to work on this issue
-- [ ] If you are not the issue author, add your approach along with \`/assign\`
-
-If you do not get a reply in time, please join Discord and message there with your GitHub username.`
+              body
             });
 
       - name: Welcome pull request author
@@ -54,20 +54,20 @@ If you do not get a reply in time, please join Discord and message there with yo
 
             const pr = context.payload.pull_request;
 
+            const body =
+              `🎉 Well done, @${pr.user.login}! Thanks for raising this PR.\n\n` +
+              `PA will review it shortly. If you do not hear back in time, please join Discord and message there with your GitHub username.\n\n` +
+              `### Checklist\n` +
+              `- [ ] Star the repository\n` +
+              `- [ ] Fork the repository\n` +
+              `- [ ] Read \`CONTRIBUTING.md\`\n` +
+              `- [ ] Make sure the PR is linked to the relevant issue\n` +
+              `- [ ] Make sure the PR follows the contribution rules\n\n` +
+              `Please make sure your PR follows our Contributing Guidelines (CONTRIBUTING.md).`;
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              body: `🎉 Well done, @${pr.user.login}! Thanks for raising this PR.
-
-PA will review it shortly. If you do not hear back in time, please join Discord and message there with your GitHub username.
-
-### Checklist
-- [ ] Star the repository
-- [ ] Fork the repository
-- [ ] Read \`CONTRIBUTING.md\`
-- [ ] Make sure the PR is linked to the relevant issue
-- [ ] Make sure the PR follows the contribution rules
-
-Please make sure your PR follows our Contributing Guidelines (CONTRIBUTING.md).`
+              body
             });
