@@ -207,13 +207,15 @@ jobs:
             }
 
             function buildQueueBody(state) {
-              return `${QUEUE_MARKER}
-primary: ${state.primary || ""}
-primary_assigned_at: ${state.primary_assigned_at || ""}
-backup: ${state.backup || ""}
-backup_approach: ${state.backup_approach || ""}
-last_progress_at: ${state.last_progress_at || ""}
--->`;
+              return (
+                `${QUEUE_MARKER}\n` +
+                `primary: ${state.primary || ""}\n` +
+                `primary_assigned_at: ${state.primary_assigned_at || ""}\n` +
+                `backup: ${state.backup || ""}\n` +
+                `backup_approach: ${state.backup_approach || ""}\n` +
+                `last_progress_at: ${state.last_progress_at || ""}\n` +
+                `-->`
+              );
             }
 
             async function ensureQueueComment() {
@@ -334,7 +336,8 @@ last_progress_at: ${state.last_progress_at || ""}
                 } catch (e) {}
 
                 const forceBody =
-                  `🎯 @${targetUser} has been assigned to this issue by a maintainer. Please share meaningful progress within 3 days, or it may be opened to others.\n`;
+                  `🎯 @${targetUser} has been assigned to this issue by a maintainer. ` +
+                  `Please share meaningful progress within 3 days, or it may be opened to others.\n`;
 
                 await github.rest.issues.createComment({
                   owner,
@@ -664,13 +667,15 @@ last_progress_at: ${state.last_progress_at || ""}
             }
 
             function buildQueueBody(state) {
-              return `${QUEUE_MARKER}
-primary: ${state.primary || ""}
-primary_assigned_at: ${state.primary_assigned_at || ""}
-backup: ${state.backup || ""}
-backup_approach: ${state.backup_approach || ""}
-last_progress_at: ${state.last_progress_at || ""}
--->`;
+              return (
+                `${QUEUE_MARKER}\n` +
+                `primary: ${state.primary || ""}\n` +
+                `primary_assigned_at: ${state.primary_assigned_at || ""}\n` +
+                `backup: ${state.backup || ""}\n` +
+                `backup_approach: ${state.backup_approach || ""}\n` +
+                `last_progress_at: ${state.last_progress_at || ""}\n` +
+                `-->`
+              );
             }
 
             const now = Date.now();
@@ -688,7 +693,9 @@ last_progress_at: ${state.last_progress_at || ""}
                 per_page: 100
               });
 
-              const queueComment = comments.find(c => String(c.body || "").includes(QUEUE_MARKER));
+              const queueComment = comments.find(c =>
+                String(c.body || "").includes(QUEUE_MARKER)
+              );
               if (!queueComment) {
                 continue;
               }

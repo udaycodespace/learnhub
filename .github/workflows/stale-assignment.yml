@@ -62,13 +62,15 @@ jobs:
             }
 
             function buildQueueBody(state) {
-              return `${QUEUE_MARKER}
-primary: ${state.primary || ""}
-primary_assigned_at: ${state.primary_assigned_at || ""}
-backup: ${state.backup || ""}
-backup_approach: ${state.backup_approach || ""}
-last_progress_at: ${state.last_progress_at || ""}
--->`;
+              return (
+                `${QUEUE_MARKER}\n` +
+                `primary: ${state.primary || ""}\n` +
+                `primary_assigned_at: ${state.primary_assigned_at || ""}\n` +
+                `backup: ${state.backup || ""}\n` +
+                `backup_approach: ${state.backup_approach || ""}\n` +
+                `last_progress_at: ${state.last_progress_at || ""}\n` +
+                `-->`
+              );
             }
 
             for (const issue of issues) {
@@ -94,22 +96,30 @@ last_progress_at: ${state.last_progress_at || ""}
               });
 
               const latestAssignedEvent = events
-                .filter(event => event.event === "assigned" && event.assignee && event.assignee.login === assignee)
+                .filter(
+                  event =>
+                    event.event === "assigned" &&
+                    event.assignee &&
+                    event.assignee.login === assignee
+                )
                 .pop();
 
               if (!latestAssignedEvent) {
-                console.log(`Skipping #${issueNumber} because no matching assignment event was found.`);
+                console.log(
+                  `Skipping #${issueNumber} because no matching assignment event was found.`
+                );
                 continue;
               }
 
               const assignedAtMs = new Date(latestAssignedEvent.created_at).getTime();
               const elapsedMs = now - assignedAtMs;
 
-              const hasLinkedPR = events.some(event =>
-                event.event === "cross-referenced" &&
-                event.source &&
-                event.source.issue &&
-                event.source.issue.pull_request
+              const hasLinkedPR = events.some(
+                event =>
+                  event.event === "cross-referenced" &&
+                  event.source &&
+                  event.source.issue &&
+                  event.source.issue.pull_request
               );
 
               if (hasLinkedPR) {
@@ -172,19 +182,21 @@ last_progress_at: ${state.last_progress_at || ""}
                   queueState.backup_approach = "";
                   queueState.last_progress_at = promotionTimeIso;
 
+                  const queueBody = buildQueueBody(queueState);
+
                   if (queueComment) {
                     await github.rest.issues.updateComment({
                       owner,
                       repo,
                       comment_id: queueComment.id,
-                      body: buildQueueBody(queueState)
+                      body: queueBody
                     });
                   } else {
                     await github.rest.issues.createComment({
                       owner,
                       repo,
                       issue_number: issueNumber,
-                      body: buildQueueBody(queueState)
+                      body: queueBody
                     });
                   }
 
@@ -213,7 +225,9 @@ last_progress_at: ${state.last_progress_at || ""}
                     body: promotionBody
                   });
 
-                  console.log(`Promoted @${backup} on issue #${issueNumber} because primary @${primary} was stale.`);
+                  console.log(
+                    `Promoted @${backup} on issue #${issueNumber} because primary @${primary} was stale.`
+                  );
                 } else {
                   await github.rest.issues.removeAssignees({
                     owner,
@@ -252,7 +266,9 @@ last_progress_at: ${state.last_progress_at || ""}
                     body: unassignBody
                   });
 
-                  console.log(`Unassigned @${assignee} from issue #${issueNumber} (no backup claimant).`);
+                  console.log(
+                    `Unassigned @${assignee} from issue #${issueNumber} (no backup claimant).`
+                  );
                 }
 
                 continue;
