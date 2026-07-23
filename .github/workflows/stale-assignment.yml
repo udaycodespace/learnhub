@@ -2,7 +2,7 @@ name: Stale Assignment Cleanup
 
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 * * *" # every day at 00:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -13,10 +13,12 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Auto-unassign stale issues
+      - name: Auto-handle stale assignments (promote or unassign)
         uses: actions/github-script@v7
         with:
           script: |
+            const { github, context } = require("@actions/github");
+
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
@@ -24,6 +26,7 @@ jobs:
             const warningLimitMs = 2 * 24 * 60 * 60 * 1000;
             const unassignLimitMs = 3 * 24 * 60 * 60 * 1000;
 
+            // List all open issues with at least one assignee
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
               repo,
@@ -31,6 +34,42 @@ jobs:
               assignee: "*",
               per_page: 100
             });
+
+            const QUEUE_MARKER = "<!-- learnhub-queue-state";
+            const WARNING_MARKER = "<!-- stale-assignment-warning -->";
+
+            function parseQueueState(body) {
+              const state = {
+                primary: "",
+                primary_assigned_at: "",
+                backup: "",
+                backup_approach: "",
+                last_progress_at: ""
+              };
+              if (!body) return state;
+              const lines = String(body).split("\n");
+              for (const line of lines) {
+                const m = line.match(/^\s*([a-z_]+):\s*(.*)\s*$/i);
+                if (m) {
+                  const key = m[1].trim();
+                  const val = m[2].trim();
+                  if (Object.prototype.hasOwnProperty.call(state, key)) {
+                    state[key] = val;
+                  }
+                }
+              }
+              return state;
+            }
+
+            function buildQueueBody(state) {
+              return `${QUEUE_MARKER}
+primary: ${state.primary || ""}
+primary_assigned_at: ${state.primary_assigned_at || ""}
+backup: ${state.backup || ""}
+backup_approach: ${state.backup_approach || ""}
+last_progress_at: ${state.last_progress_at || ""}
+-->`;
+            }
 
             for (const issue of issues) {
               if (issue.pull_request) continue;
@@ -47,6 +86,7 @@ jobs:
 
               const assignee = assignees[0];
 
+              // Get latest "assigned" event for this assignee
               const events = await github.paginate(github.rest.issues.listEvents, {
                 owner,
                 repo,
@@ -66,14 +106,8 @@ jobs:
               const assignedAtMs = new Date(latestAssignedEvent.created_at).getTime();
               const elapsedMs = now - assignedAtMs;
 
-              const timelineEvents = await github.paginate(github.rest.issues.listEvents, {
-                owner,
-                repo,
-                issue_number: issueNumber,
-                per_page: 100
-              });
-
-              const hasLinkedPR = timelineEvents.some(event =>
+              // Skip issues that already have a linked PR
+              const hasLinkedPR = events.some(event =>
                 event.event === "cross-referenced" &&
                 event.source &&
                 event.source.issue &&
@@ -85,6 +119,7 @@ jobs:
                 continue;
               }
 
+              // Load comments to check warning and queue state
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
                 repo,
@@ -92,55 +127,142 @@ jobs:
                 per_page: 100
               });
 
-              const warningMarker = "<!-- stale-assignment-warning -->";
               const hasWarning = comments.some(comment =>
-                String(comment.body || "").includes(warningMarker)
+                String(comment.body || "").includes(WARNING_MARKER)
               );
 
+              const queueComment = comments.find(c =>
+                String(c.body || "").includes(QUEUE_MARKER)
+              );
+
+              const queueState = queueComment ? parseQueueState(queueComment.body || "") : {
+                primary: "",
+                primary_assigned_at: "",
+                backup: "",
+                backup_approach: "",
+                last_progress_at: ""
+              };
+
+              // 3-day boundary: prefer PROMOTION if backup exists, else UNASSIGN
               if (elapsedMs >= unassignLimitMs) {
-                await github.rest.issues.removeAssignees({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  assignees: [assignee]
-                });
+                const primary = queueState.primary || assignee;
+                const backup = queueState.backup;
 
-                try {
-                  await github.rest.issues.removeLabel({
+                if (backup) {
+                  // Promote backup instead of freeing the issue
+                  const currentAssignees = (issue.assignees || []).map(a => a.login);
+                  if (currentAssignees.length > 0) {
+                    await github.rest.issues.removeAssignees({
+                      owner,
+                      repo,
+                      issue_number: issueNumber,
+                      assignees: currentAssignees
+                    });
+                  }
+
+                  await github.rest.issues.addAssignees({
                     owner,
                     repo,
                     issue_number: issueNumber,
-                    name: "assigned"
+                    assignees: [backup]
                   });
-                } catch (e) {}
 
-                try {
-                  await github.rest.issues.addLabels({
+                  const promotionTimeIso = new Date().toISOString();
+                  queueState.primary = backup;
+                  queueState.primary_assigned_at = promotionTimeIso;
+                  queueState.backup = "";
+                  queueState.backup_approach = "";
+                  queueState.last_progress_at = promotionTimeIso;
+
+                  if (queueComment) {
+                    await github.rest.issues.updateComment({
+                      owner,
+                      repo,
+                      comment_id: queueComment.id,
+                      body: buildQueueBody(queueState)
+                    });
+                  } else {
+                    await github.rest.issues.createComment({
+                      owner,
+                      repo,
+                      issue_number: issueNumber,
+                      body: buildQueueBody(queueState)
+                    });
+                  }
+
+                  try {
+                    await github.rest.issues.addLabels({
+                      owner,
+                      repo,
+                      issue_number: issueNumber,
+                      labels: ["auto-promoted"]
+                    });
+                  } catch (e) {}
+
+                  await github.rest.issues.createComment({
                     owner,
                     repo,
                     issue_number: issueNumber,
-                    labels: ["available"]
+                    body: `⏳ The primary claimant (@${primary}) did not show enough progress in 3 days. @${backup} is now the new priority assignee for this issue.
+
+Please:
+- Star the repository
+- Fork the repository
+- Understand the issue clearly
+- Share meaningful progress as soon as you can.`
                   });
-                } catch (e) {}
 
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  body: `@${assignee} this issue has been unassigned automatically after 3 days of inactivity with no linked PR. It is now open for other contributors.\n\nIf you still want to work on it, comment again with \`/assign\` and share your approach.`
-                });
+                  console.log(`Promoted @${backup} on issue #${issueNumber} because primary @${primary} was stale.`);
+                } else {
+                  // No backup: free the issue as before
+                  await github.rest.issues.removeAssignees({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    assignees: [assignee]
+                  });
 
-                console.log(`Unassigned @${assignee} from issue #${issueNumber}`);
+                  try {
+                    await github.rest.issues.removeLabel({
+                      owner,
+                      repo,
+                      issue_number: issueNumber,
+                      name: "assigned"
+                    });
+                  } catch (e) {}
+
+                  try {
+                    await github.rest.issues.addLabels({
+                      owner,
+                      repo,
+                      issue_number: issueNumber,
+                      labels: ["available"]
+                    });
+                  } catch (e) {}
+
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body: `@${assignee} this issue has been unassigned automatically after 3 days of inactivity with no linked PR and no backup claimant. It is now open for other contributors.
+
+If you still want to work on it, comment again with \`/assign\` and share your approach.`
+                  });
+
+                  console.log(`Unassigned @${assignee} from issue #${issueNumber} (no backup claimant).`);
+                }
+
                 continue;
               }
 
+              // 2-day warning (only once)
               if (elapsedMs >= warningLimitMs && !hasWarning) {
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: issueNumber,
-                  body: `${warningMarker}
-                  @${assignee} friendly reminder: this issue has been assigned for 2 days and no linked PR was detected yet. If there is no meaningful progress within 3 days, it may be unassigned automatically.`
+                  body: `${WARNING_MARKER}
+@${assignee} friendly reminder: this issue has been assigned for 2 days and no linked PR was detected yet. If there is no meaningful progress within 3 days, it may be promoted to a backup claimant or unassigned automatically.`
                 });
 
                 console.log(`Warning sent to @${assignee} on issue #${issueNumber}`);

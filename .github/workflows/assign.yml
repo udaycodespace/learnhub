@@ -5,6 +5,8 @@ on:
     types: [assigned]
   issue_comment:
     types: [created]
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours (UTC)
 
 permissions:
   issues: write
@@ -22,6 +24,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const core = require("@actions/core");
+            const { context, github } = require("@actions/github");
+
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue = context.payload.issue;
@@ -52,11 +57,7 @@ jobs:
               return;
             }
 
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issueNumber,
-              body: `${marker}
+            const body = `${marker}
 👋 Hi @${assignee.login}, you have been assigned to this issue by @${assigner?.login || "a maintainer"}.
 
 Welcome to LearnHub. Please make sure you:
@@ -68,19 +69,30 @@ Welcome to LearnHub. Please make sure you:
 
 Please share meaningful progress within 3 days, or the issue may be reassigned.
 
-If you need help or may be delayed, please join Discord and message there with your GitHub username.`
+If you need help or may be delayed, please ping @udaycodespace or join Discord and message there with your GitHub username.
+
+Note: PRs with fewer than 20 lines are not accepted.`;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              body
             });
 
-  assign-command:
+  handle-commands:
     if: ${{ github.event_name == 'issue_comment' && !github.event.issue.pull_request }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Handle /assign and /unassign commands
+      - name: Handle /assign, /work, /unassign commands
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const core = require("@actions/core");
+            const { context, github } = require("@actions/github");
+
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue = context.payload.issue;
@@ -92,11 +104,13 @@ If you need help or may be delayed, please join Discord and message there with y
             const commenter = comment.user.login;
             const issueAuthor = issue.user.login;
 
+            const isAssignCommand = /^\/assign(?:\s+(.+))?$/i.test(commentBody);
             const assignMatch = commentBody.match(/^\/assign(?:\s+(.+))?$/i);
-            const isAssign = Boolean(assignMatch);
-            const isUnassign = /^\/unassign\s*$/i.test(commentBody);
+            const isWorkCommand = /^\/work\s+(.+)$/i.test(commentBody);
+            const workMatch = commentBody.match(/^\/work\s+(.+)$/i);
+            const isUnassignCommand = /^\/unassign\s*$/i.test(commentBody);
 
-            if (!isAssign && !isUnassign) {
+            if (!isAssignCommand && !isWorkCommand && !isUnassignCommand) {
               return;
             }
 
@@ -105,139 +119,300 @@ If you need help or may be delayed, please join Discord and message there with y
                 owner,
                 repo,
                 issue_number: issueNumber,
-                body: `@${commenter}, this issue is already closed and cannot be assigned or unassigned.`
+                body: `@${commenter}, this issue is already closed and cannot be assigned, worked, or unassigned.`
               });
               return;
             }
 
-            let isMaintainer = false;
-            try {
-              const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
-                owner,
-                repo,
-                username: commenter
-              });
-              isMaintainer =
-                ["admin", "write"].includes(permission.permission) ||
-                ["admin", "maintain", "write"].includes(permission.role_name);
-            } catch (e) {}
+            // Helper: check if commenter is maintainer
+            async function isMaintainer(username) {
+              try {
+                const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+                  owner,
+                  repo,
+                  username
+                });
+                return (
+                  ["admin", "write"].includes(permission.permission) ||
+                  ["admin", "maintain", "write"].includes(permission.role_name)
+                );
+              } catch (e) {
+                return false;
+              }
+            }
 
+            // Helper: current assignees
             const currentAssignees = (issue.assignees || []).map(a => a.login);
             const lowerCurrentAssignees = currentAssignees.map(login => login.toLowerCase());
             const commenterLower = commenter.toLowerCase();
             const issueAuthorLower = issueAuthor.toLowerCase();
 
-            if (isAssign) {
-              const rawArgument = (assignMatch[1] || "").trim();
-
-              const forceAssignMatch = rawArgument.match(/^@([a-zA-Z0-9-]+)$/);
-              const isForceAssign = Boolean(forceAssignMatch);
-              const targetUser = isForceAssign ? forceAssignMatch[1] : commenter;
-
-              if (isForceAssign && !isMaintainer) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  body: `@${commenter}, only maintainers can assign other users directly.`
-                });
-                return;
-              }
-
-              const isSelfIssue = commenterLower === issueAuthorLower;
-              const hasApproach = rawArgument.length > 0 && !isForceAssign;
-
-              if (!isSelfIssue && !isMaintainer && !hasApproach) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  body: `@${commenter}, since this issue was opened by someone else, please comment with your approach along with \`/assign\`.
-
-Example:
-\`/assign I will reproduce the issue locally, trace the affected component flow, and submit a tested fix.\``
-                });
-                return;
-              }
-
-              if (currentAssignees.length > 0 && !isForceAssign) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  body: `@${commenter}, this issue is already assigned to @${currentAssignees[0]}. If there is no meaningful progress within 3 days, it may become available again.`
-                });
-                return;
-              }
-
-              const maxConcurrent = 2;
+            // Helper: 2-open-issue limit
+            async function hasTooManyOpenAssignments(username) {
               const { data: assignedItems } = await github.rest.issues.listForRepo({
                 owner,
                 repo,
-                assignee: targetUser,
+                assignee: username,
                 state: "open",
                 per_page: 100
               });
-
               const assignedOpenIssuesOnly = assignedItems.filter(item => !item.pull_request);
-              const isAlreadyAssignedHere = lowerCurrentAssignees.includes(String(targetUser).toLowerCase());
+              return assignedOpenIssuesOnly.length >= 2;
+            }
 
-              if (!isAlreadyAssignedHere && assignedOpenIssuesOnly.length >= maxConcurrent) {
+            async function replyLimit(username) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: `Easy there, legend — @${username} already has 2 open issues. Finish one first and let others cook too.`
+              });
+            }
+
+            // Sticky queue state comment helpers
+            const QUEUE_MARKER = "<!-- learnhub-queue-state";
+
+            async function getQueueComment() {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100
+              });
+              return comments.find(c => String(c.body || "").includes(QUEUE_MARKER)) || null;
+            }
+
+            function parseQueueState(body) {
+              const state = {
+                primary: "",
+                primary_assigned_at: "",
+                backup: "",
+                backup_approach: "",
+                last_progress_at: ""
+              };
+              if (!body) return state;
+              const lines = String(body).split("\n");
+              for (const line of lines) {
+                const m = line.match(/^\s*([a-z_]+):\s*(.*)\s*$/i);
+                if (m) {
+                  const key = m[1].trim();
+                  const val = m[2].trim();
+                  if (Object.prototype.hasOwnProperty.call(state, key)) {
+                    state[key] = val;
+                  }
+                }
+              }
+              return state;
+            }
+
+            function buildQueueBody(state) {
+              return `${QUEUE_MARKER}
+primary: ${state.primary || ""}
+primary_assigned_at: ${state.primary_assigned_at || ""}
+backup: ${state.backup || ""}
+backup_approach: ${state.backup_approach || ""}
+last_progress_at: ${state.last_progress_at || ""}
+-->`;
+            }
+
+            async function ensureQueueComment() {
+              let qc = await getQueueComment();
+              if (!qc) {
+                const initialState = {
+                  primary: "",
+                  primary_assigned_at: "",
+                  backup: "",
+                  backup_approach: "",
+                  last_progress_at: ""
+                };
+                const body = buildQueueBody(initialState);
+                const { data: created } = await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body
+                });
+                qc = created;
+              }
+              return qc;
+            }
+
+            const queueComment = await ensureQueueComment();
+            let queueState = parseQueueState(queueComment.body || "");
+
+            const commenterIsMaintainer = await isMaintainer(commenter);
+            const isSelfIssue = commenterLower === issueAuthorLower;
+
+            // COMMAND: /assign (self or @someone)
+            if (isAssignCommand) {
+              const rawArg = (assignMatch[1] || "").trim();
+              const isForceAssign = /^@([a-zA-Z0-9-]+)$/i.test(rawArg);
+              const forceMatch = rawArg.match(/^@([a-zA-Z0-9-]+)$/i);
+              const targetUser = isForceAssign ? forceMatch[1] : commenter;
+
+              if (issue.pull_request) {
                 await github.rest.issues.createComment({
                   owner,
                   repo,
                   issue_number: issueNumber,
-                  body: `@${targetUser}, you are already assigned to ${assignedOpenIssuesOnly.length} open issues. Please complete them before taking another one. The limit is ${maxConcurrent}.`
+                  body: `@${commenter}, assignment commands are only for issues, not pull requests.`
                 });
                 return;
               }
 
-              if (isForceAssign && currentAssignees.length > 0) {
-                await github.rest.issues.removeAssignees({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  assignees: currentAssignees
-                });
-              }
-
-              if (!isAlreadyAssignedHere) {
-                await github.rest.issues.addAssignees({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  assignees: [targetUser]
-                });
-              }
-
-              const labels = (issue.labels || []).map(l => String(l.name || "").toLowerCase());
-              const labelsToAdd = ["assigned"].filter(label => !labels.includes(label));
-              if (labelsToAdd.length > 0) {
-                try {
-                  await github.rest.issues.addLabels({
+              // /assign @someone (maintainer-only)
+              if (isForceAssign) {
+                if (!commenterIsMaintainer) {
+                  await github.rest.issues.createComment({
                     owner,
                     repo,
                     issue_number: issueNumber,
-                    labels: labelsToAdd
+                    body: `@${commenter}, only maintainers can assign other users directly.`
+                  });
+                  return;
+                }
+
+                if (await hasTooManyOpenAssignments(targetUser)) {
+                  await replyLimit(targetUser);
+                  return;
+                }
+
+                const isAlreadyPrimary = queueState.primary.toLowerCase() === targetUser.toLowerCase();
+
+                // Remove existing assignees if primary changing
+                if (!isAlreadyPrimary && currentAssignees.length > 0) {
+                  await github.rest.issues.removeAssignees({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    assignees: currentAssignees
+                  });
+                }
+
+                if (!lowerCurrentAssignees.includes(targetUser.toLowerCase())) {
+                  await github.rest.issues.addAssignees({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    assignees: [targetUser]
+                  });
+                }
+
+                const now = new Date().toISOString();
+                queueState.primary = targetUser;
+                queueState.primary_assigned_at = now;
+                queueState.backup = "";
+                queueState.backup_approach = "";
+                queueState.last_progress_at = now;
+
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: queueComment.id,
+                  body: buildQueueBody(queueState)
+                });
+
+                const labels = (issue.labels || []).map(l => String(l.name || "").toLowerCase());
+                const labelsToAdd = ["assigned"].filter(label => !labels.includes(label));
+                if (labelsToAdd.length > 0) {
+                  try {
+                    await github.rest.issues.addLabels({
+                      owner,
+                      repo,
+                      issue_number: issueNumber,
+                      labels: labelsToAdd
+                    });
+                  } catch (e) {}
+                }
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    name: "available"
                   });
                 } catch (e) {}
+
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `🎯 @${targetUser} has been assigned to this issue by a maintainer. Please share meaningful progress within 3 days, or it may be opened to others.`
+                });
+
+                return;
               }
 
-              const assignmentMessage =
-                isForceAssign
-                  ? `🎯 @${targetUser} has been assigned to this issue by a maintainer. Please share progress within 3 days, or the issue may be opened for someone else.`
-                  : isSelfIssue
-                    ? `🎉 @${targetUser} has been assigned to this issue. Welcome to LearnHub.
+              // Plain /assign (self-claim)
+              if (await hasTooManyOpenAssignments(commenter)) {
+                await replyLimit(commenter);
+                return;
+              }
 
-Please make sure you:
+              const hasPrimaryAssignee = currentAssignees.length > 0;
+
+              if (!hasPrimaryAssignee) {
+                // Assign commenter as primary
+                if (!lowerCurrentAssignees.includes(commenterLower)) {
+                  await github.rest.issues.addAssignees({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    assignees: [commenter]
+                  });
+                }
+
+                const now = new Date().toISOString();
+                queueState.primary = commenter;
+                queueState.primary_assigned_at = now;
+                queueState.backup = "";
+                queueState.backup_approach = "";
+                queueState.last_progress_at = now;
+
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: queueComment.id,
+                  body: buildQueueBody(queueState)
+                });
+
+                const labels = (issue.labels || []).map(l => String(l.name || "").toLowerCase());
+                const labelsToAdd = ["assigned"].filter(label => !labels.includes(label));
+                if (labelsToAdd.length > 0) {
+                  try {
+                    await github.rest.issues.addLabels({
+                      owner,
+                      repo,
+                      issue_number: issueNumber,
+                      labels: labelsToAdd
+                    });
+                  } catch (e) {}
+                }
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    name: "available"
+                  });
+                } catch (e) {}
+
+                const isAuthor = isSelfIssue;
+                const welcomeBody = isAuthor
+                  ? `🎉 @${commenter} has been assigned to this issue. Welcome to LearnHub.
+
+Hope you do well on this issue. Please make sure you:
 - Star the repository
 - Fork the repository
 - Read \`CONTRIBUTING.md\`
 - Read \`CODE_OF_CONDUCT.md\`
 - Understand the issue clearly before starting
+- Share meaningful progress within 3 days
 
-Please share meaningful progress within 3 days, or it may be made available to others.`
-                    : `🎉 @${targetUser} has been assigned to this issue based on the proposed approach. Welcome to LearnHub.
+If you need help or may be delayed, please ping @udaycodespace.
+
+Note: PRs with fewer than 20 lines are not accepted.`
+                  : `🎉 @${commenter} has been assigned to this issue. Welcome to LearnHub.
 
 Please make sure you:
 - Star the repository
@@ -248,16 +423,127 @@ Please make sure you:
 
 Please share meaningful progress within 3 days, or it may be made available to others.`;
 
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: issueNumber,
-                body: assignmentMessage
-              });
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: welcomeBody
+                });
+
+              } else {
+                // Already assigned
+                if (lowerCurrentAssignees.includes(commenterLower)) {
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body: `@${commenter}, you are already assigned to this issue. Please focus on making progress and sharing updates within 3 days.`
+                  });
+                } else {
+                  const primary = currentAssignees[0];
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body: `@${commenter}, first priority for this issue is with @${primary}. 
+
+If you’d like to be next in queue, please use \`/work <approach>\` and describe how you plan to solve it. After the 3-day window, you may be auto-promoted if there is no meaningful progress from the primary assignee.`
+                  });
+                }
+              }
+
+              return;
             }
 
-            if (isUnassign) {
-              if (!lowerCurrentAssignees.includes(commenterLower) && !isMaintainer) {
+            // COMMAND: /work <approach> (backup claim)
+            if (isWorkCommand) {
+              if (issue.pull_request) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `@${commenter}, work queue commands are only for issues, not pull requests.`
+                });
+                return;
+              }
+
+              const approach = workMatch[1].trim();
+              if (!approach) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `@${commenter}, please provide your approach after \`/work\`. Example: \`/work I will reproduce the issue locally, trace the flow, and submit a tested fix.\``
+                });
+                return;
+              }
+
+              if (await hasTooManyOpenAssignments(commenter)) {
+                await replyLimit(commenter);
+                return;
+              }
+
+              const primary = queueState.primary || (currentAssignees[0] || "");
+              if (!primary) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `@${commenter}, this issue is currently unassigned. You can claim it directly with \`/assign\`.`
+                });
+                return;
+              }
+
+              if (!queueState.backup) {
+                queueState.backup = commenter;
+                queueState.backup_approach = approach;
+
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: queueComment.id,
+                  body: buildQueueBody(queueState)
+                });
+
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `@${commenter}, first priority is with @${primary}. You are now next in the queue for this issue with the following approach:
+
+\`${approach}\`
+
+Please make sure you:
+- Star the repository
+- Fork the repository
+- Understand the issue clearly
+
+If @${primary} doesn’t show meaningful progress within 3 days, you may be auto-promoted to primary assignee.`
+                });
+              } else if (queueState.backup.toLowerCase() === commenterLower) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `@${commenter}, you are already in the backup queue for this issue. Please focus on your described approach and wait for the 3-day window.`
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `@${commenter}, the backup slot for this issue is already taken by @${queueState.backup}. Please pick another issue to work on.`
+                });
+              }
+
+              return;
+            }
+
+            // COMMAND: /unassign
+            if (isUnassignCommand) {
+              const isPrimary = lowerCurrentAssignees.includes(commenterLower);
+
+              if (!isPrimary && !commenterIsMaintainer) {
                 await github.rest.issues.createComment({
                   owner,
                   repo,
@@ -267,10 +553,7 @@ Please share meaningful progress within 3 days, or it may be made available to o
                 return;
               }
 
-              const usersToRemove =
-                !lowerCurrentAssignees.includes(commenterLower) && isMaintainer
-                  ? currentAssignees
-                  : [commenter];
+              const usersToRemove = commenterIsMaintainer ? currentAssignees : [commenter];
 
               if (usersToRemove.length === 0) {
                 await github.rest.issues.createComment({
@@ -289,6 +572,20 @@ Please share meaningful progress within 3 days, or it may be made available to o
                 assignees: usersToRemove
               });
 
+              // Reset queue completely on unassign
+              queueState.primary = "";
+              queueState.primary_assigned_at = "";
+              queueState.backup = "";
+              queueState.backup_approach = "";
+              queueState.last_progress_at = "";
+
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: queueComment.id,
+                body: buildQueueBody(queueState)
+              });
+
               try {
                 await github.rest.issues.removeLabel({
                   owner,
@@ -297,7 +594,6 @@ Please share meaningful progress within 3 days, or it may be made available to o
                   name: "assigned"
                 });
               } catch (e) {}
-
               try {
                 await github.rest.issues.addLabels({
                   owner,
@@ -312,5 +608,164 @@ Please share meaningful progress within 3 days, or it may be made available to o
                 repo,
                 issue_number: issueNumber,
                 body: `🧹 This issue is now unassigned and open for other contributors.`
+              });
+
+              return;
+            }
+
+  auto-promotion:
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Auto-promote backup claimants after 3 days
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const core = require("@actions/core");
+            const { github, context } = require("@actions/github");
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              labels: "assigned",
+              per_page: 100
+            });
+
+            const QUEUE_MARKER = "<!-- learnhub-queue-state";
+
+            function parseQueueState(body) {
+              const state = {
+                primary: "",
+                primary_assigned_at: "",
+                backup: "",
+                backup_approach: "",
+                last_progress_at: ""
+              };
+              if (!body) return state;
+              const lines = String(body).split("\n");
+              for (const line of lines) {
+                const m = line.match(/^\s*([a-z_]+):\s*(.*)\s*$/i);
+                if (m) {
+                  const key = m[1].trim();
+                  const val = m[2].trim();
+                  if (Object.prototype.hasOwnProperty.call(state, key)) {
+                    state[key] = val;
+                  }
+                }
+              }
+              return state;
+            }
+
+            function buildQueueBody(state) {
+              return `${QUEUE_MARKER}
+primary: ${state.primary || ""}
+primary_assigned_at: ${state.primary_assigned_at || ""}
+backup: ${state.backup || ""}
+backup_approach: ${state.backup_approach || ""}
+last_progress_at: ${state.last_progress_at || ""}
+-->`;
+            }
+
+            const now = Date.now();
+            const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+
+            for (const issue of issues) {
+              if (issue.pull_request) continue;
+
+              const issueNumber = issue.number;
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100
+              });
+
+              const queueComment = comments.find(c => String(c.body || "").includes(QUEUE_MARKER));
+              if (!queueComment) {
+                continue;
+              }
+
+              let queueState = parseQueueState(queueComment.body || "");
+              const primary = queueState.primary;
+              const backup = queueState.backup;
+
+              if (!primary || !backup) {
+                continue;
+              }
+
+              const activityIso = queueState.last_progress_at || queueState.primary_assigned_at;
+              if (!activityIso) {
+                continue;
+              }
+
+              const activityTime = Date.parse(activityIso);
+              if (Number.isNaN(activityTime)) {
+                continue;
+              }
+
+              const inactiveForMs = now - activityTime;
+              if (inactiveForMs < threeDaysMs) {
+                continue;
+              }
+
+              // Promote backup
+              const currentAssignees = (issue.assignees || []).map(a => a.login);
+              if (currentAssignees.length > 0) {
+                await github.rest.issues.removeAssignees({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  assignees: currentAssignees
+                });
+              }
+
+              await github.rest.issues.addAssignees({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                assignees: [backup]
+              });
+
+              const promotionTimeIso = new Date().toISOString();
+              queueState.primary = backup;
+              queueState.primary_assigned_at = promotionTimeIso;
+              queueState.backup = "";
+              queueState.backup_approach = "";
+              queueState.last_progress_at = promotionTimeIso;
+
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: queueComment.id,
+                body: buildQueueBody(queueState)
+              });
+
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  labels: ["auto-promoted"]
+                });
+              } catch (e) {}
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: `⏳ The primary claimant did not show enough progress in 3 days. @${backup} is now the new priority assignee for this issue.
+
+Please:
+- Star the repository
+- Fork the repository
+- Understand the issue clearly
+- Share meaningful progress as soon as you can.`
               });
             }
