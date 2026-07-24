@@ -8,6 +8,7 @@ import NavBar from '../../common/NavBar';
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { Button } from '@mui/material';
+import BookmarkButton from "../../bookmarks/BookmarkButton";
 import CourseReviews from "../../reviews/CourseReviews";
 
 const CourseContent = () => {
@@ -98,7 +99,7 @@ const CourseContent = () => {
       <>
          <NavBar />
          <h1 className='my-3 text-center'>Welcome to the course: {courseTitle}</h1>
-
+<BookmarkButton courseId={courseId} />
          <div className='course-content'>
             <div className="course-section">
                <Accordion defaultActiveKey="0" flush>

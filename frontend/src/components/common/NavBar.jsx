@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect, useRef } from 'react'
 import { Navbar, Nav, Button, Container } from 'react-bootstrap';
 import { UserContext } from '../../App';
 import { NavLink } from 'react-router-dom';
+import SavedCoursesNavLink from "../bookmarks/SavedCoursesNavLink";
 
 const NavBar = ({ setSelectedComponent }) => {
 
@@ -123,6 +124,7 @@ const NavBar = ({ setSelectedComponent }) => {
                     Log Out
                   </Button>
                </Nav>
+               <SavedCoursesNavLink />
             </Navbar.Collapse>
          </Container>
       </Navbar>

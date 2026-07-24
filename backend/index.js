@@ -49,6 +49,7 @@ app.get('/api/admin', (req, res) => {
 ///ROUTES///
 app.use('/api/admin', require('./routers/adminRoutes'))
 app.use('/api/user', require('./routers/userRoutes'))
+app.use('/api/bookmarks', require('./routers/courseBookmarkRoutes'))
 app.use('/api/reviews', require('./routers/courseReviewRoutes'))
 
 

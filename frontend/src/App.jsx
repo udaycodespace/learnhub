@@ -9,6 +9,11 @@ import Dashboard from "./components/common/Dashboard";
 import CourseContent from "./components/user/student/CourseContent";
 import SiteFooter from "./components/common/SiteFooter";
 import LegalPlaceholder from "./components/common/LegalPlaceholder";
+import {
+  BookmarksProvider,
+} from "./context/BookmarksContext";
+
+import SavedCourses from "./components/bookmarks/SavedCourses";
 
 export const UserContext = createContext();
 
@@ -36,12 +41,17 @@ function App() {
   return (
     <UserContext.Provider value={{ userData, userLoggedIn }}>
       <div className="App">
+        <BookmarksProvider>
         <Router>
           <div className="content">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route
+  path="/saved-courses"
+  element={<SavedCourses />}
+/>
               <Route
                 path="/privacy"
                 element={<LegalPlaceholder title="Privacy Policy" />}
@@ -66,6 +76,7 @@ function App() {
           </div>
           <SiteFooter />
         </Router>
+        </BookmarksProvider>
       </div>
     </UserContext.Provider>
   );

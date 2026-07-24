@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { UserContext } from "../../App";
 import CourseRatingBadge from "../reviews/CourseRatingBadge";
 import axiosInstance from "./AxiosInstance";
+import BookmarkButton from "../bookmarks/BookmarkButton";
 
 const paletteByCategory = [
   ["#f2c14e", "#e56b6f"],
@@ -236,6 +237,10 @@ const AllCourses = () => {
                   <span className="course-category">
                     {course.C_categories || "General"}
                   </span>
+                  <BookmarkButton
+  courseId={course._id}
+  compact
+/>
                   <span className="course-level">
                     {levelForCourse(course, index)}
                   </span>
