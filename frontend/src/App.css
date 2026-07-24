@@ -1242,6 +1242,47 @@ select:focus-visible {
   }
 }
 
+/* ----- Dark Mode ----- */
+body.dark-mode {
+  --paper: #0f1419;
+  --paper-deep: #1a2332;
+  --ink: #e8edf5;
+  --ink-soft: #8b95a5;
+  --line: rgba(232, 237, 245, 0.12);
+  --white: #151e27;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body.dark-mode .landing-page {
+  background:
+    radial-gradient(circle at 85% 10%, rgba(49, 91, 214, 0.25), transparent 24rem),
+    var(--paper);
+}
+
+body.dark-mode .catalog-toolbar,
+body.dark-mode .hero-feature-card,
+body.dark-mode .catalog-card {
+  background: var(--white);
+}
+
+body.dark-mode .catalog-search {
+  background: var(--paper-deep);
+}
+
+body.dark-mode .catalog-search input {
+  color: var(--ink);
+}
+
+body.dark-mode .catalog-filter select {
+  color: var(--ink);
+}
+
+body.dark-mode .premium-navbar {
+  background: rgba(10, 15, 26, 0.92) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
