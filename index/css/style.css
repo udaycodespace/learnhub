@@ -93,11 +93,15 @@
       box-shadow: var(--shadow-blue);
     }
 
-    .terminal-title {
-      color: var(--blue);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
+   .terminal-title {
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  max-width: 100%;
+}
 
     .terminal-meta {
       color: var(--muted);
