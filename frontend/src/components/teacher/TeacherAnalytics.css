@@ -1,0 +1,31 @@
+.teacher-analytics { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+.ta-header { margin-bottom: 1.5rem; }
+.ta-header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+.ta-header p { margin: 0; color: #6b7280; font-size: 0.9rem; }
+.ta-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+.ta-card { text-align: center; padding: 1rem; border-radius: 10px; background: #f9fafb; border: 1px solid #e5e7eb; }
+.ta-card strong { display: block; font-size: 1.5rem; }
+.ta-card span { font-size: 0.75rem; color: #6b7280; }
+.ta-courses-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.ta-courses-table th { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 2px solid #e5e7eb; font-size: 0.78rem; text-transform: uppercase; color: #6b7280; }
+.ta-courses-table td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #f3f4f6; }
+.ta-courses-table tr:hover td { background: #f9fafb; }
+.ta-badge { padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+.ta-badge-green { background: #dcfce7; color: #15803d; }
+.ta-badge-blue { background: #dbeafe; color: #1d4ed8; }
+.ta-badge-amber { background: #fef3c7; color: #92400e; }
+.ta-empty { text-align: center; padding: 2.5rem; color: #6b7280; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 12px; }
+.ta-error { padding: 0.6rem 1rem; border-radius: 6px; background: #fef2f2; color: #dc2626; margin-bottom: 1rem; font-size: 0.85rem; }
+.ta-loading { text-align: center; padding: 2rem; color: #6b7280; }
+.ta-detail-back { background: none; border: none; color: #2563eb; cursor: pointer; font-size: 0.85rem; margin-bottom: 1rem; padding: 0; }
+.ta-detail-back:hover { text-decoration: underline; }
+.ta-detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+.ta-rating-dist { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
+.ta-rating-bar { height: 8px; background: #f59e0b; border-radius: 4px; }
+.ta-recent-list { list-style: none; padding: 0; margin: 0; }
+.ta-recent-item { padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; display: flex; justify-content: space-between; }
+.ta-recent-item span { color: #6b7280; font-size: 0.78rem; }
+@media (max-width: 600px) {
+  .ta-summary, .ta-detail-stats { grid-template-columns: repeat(2, 1fr); }
+  .ta-courses-table { font-size: 0.8rem; }
+}

@@ -65,6 +65,7 @@ app.use("/api/admin", require("./routers/adminRoutes"));
 app.use("/api/user", require("./routers/userRoutes"));
 app.use("/api/bookmarks", require("./routers/courseBookmarkRoutes"));
 app.use("/api/reviews", require("./routers/courseReviewRoutes"));
+app.use("/api/teacher/analytics", require("./routers/teacherAnalyticsRoutes"));
 
 // Unmatched /api routes answer with the project's JSON envelope rather than
 // Express's default HTML page.
