@@ -4,6 +4,8 @@ import { Button, Card, Container } from 'react-bootstrap';
 import axiosInstance from '../../common/AxiosInstance';
 import CatalogPager from '../../common/CatalogPager';
 import Toast from '../../common/Toast';
+import ConfirmDialog from '../../common/ConfirmDialog';
+import { createConfirmRequest } from '../../../lib/confirmDialog';
 import useTeacherCourses from '../../../hooks/useTeacherCourses';
 import EditCourse from './EditCourse';
 import '../../../styles/teacher-dashboard.css';
@@ -302,35 +304,23 @@ const TeacherHome = () => {
         />
       ) : null}
 
-      {pendingDelete ? (
-        <div
-          className="teacher-confirm"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="teacher-confirm-title"
-        >
-          <div className="teacher-confirm-panel">
-            <h3 id="teacher-confirm-title">Delete this course?</h3>
-            <p>
-              “{pendingDelete.title}” and its section videos will be removed,
-              along with every enrolment, payment, review and bookmark that
-              referenced it. This cannot be undone.
-            </p>
-            <div className="teacher-confirm-actions">
-              <Button
-                variant="light"
-                onClick={() => setPendingDelete(null)}
-                autoFocus
-              >
-                Cancel
-              </Button>
-              <Button variant="danger" onClick={confirmDelete}>
-                Delete course
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* This panel was the only in-page confirmation in the app. It is the
+          shared ConfirmDialog now, so SavedCourses and CourseReviews use the
+          same one rather than a third and fourth copy of it (#137). */}
+      <ConfirmDialog
+        request={
+          pendingDelete
+            ? createConfirmRequest({
+                title: 'Delete this course?',
+                consequence: `“${pendingDelete.title}” and its section videos will be removed, along with every enrolment, payment, review and bookmark that referenced it. This cannot be undone.`,
+                confirmLabel: 'Delete course',
+                onConfirm: confirmDelete,
+              })
+            : null
+        }
+        onCancel={() => setPendingDelete(null)}
+        busy={Boolean(deletingId)}
+      />
 
       <Toast message={toast.message} type={toast.type} onClose={dismissToast} />
     </Container>

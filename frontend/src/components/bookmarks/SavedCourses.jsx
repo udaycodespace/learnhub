@@ -8,6 +8,8 @@ import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../common/AxiosInstance";
 import { useBookmarks } from "../../context/BookmarksContext";
 import BookmarkButton from "./BookmarkButton";
+import ConfirmDialog from "../common/ConfirmDialog";
+import { createConfirmRequest } from "../../lib/confirmDialog";
 import "./Bookmarks.css";
 
 const initialFilters = {
@@ -40,6 +42,7 @@ const SavedCourses = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [confirmRequest, setConfirmRequest] = useState(null);
   const [error, setError] = useState("");
 
   const queryString = useMemo(() => {
@@ -117,15 +120,8 @@ const SavedCourses = () => {
     setPage(1);
   };
 
-  const handleClearAll = async () => {
-    if (!bookmarkCount) return;
-
-    const confirmed = window.confirm(
-      "Remove every course from your saved list?",
-    );
-
-    if (!confirmed) return;
-
+  const clearAll = async () => {
+    setConfirmRequest(null);
     setClearing(true);
     setError("");
 
@@ -141,6 +137,25 @@ const SavedCourses = () => {
     } finally {
       setClearing(false);
     }
+  };
+
+  // window.confirm blocked the tab, was not announced to assistive technology,
+  // could not be themed, and had nowhere to say how many courses were about to
+  // go or that it cannot be undone (#137).
+  const handleClearAll = () => {
+    if (!bookmarkCount) return;
+
+    setConfirmRequest(
+      createConfirmRequest({
+        title: "Clear your saved courses?",
+        consequence:
+          bookmarkCount === 1
+            ? "The one course on your saved list will be removed. Your enrolments are not affected, and this cannot be undone."
+            : `All ${bookmarkCount} courses on your saved list will be removed. Your enrolments are not affected, and this cannot be undone.`,
+        confirmLabel: "Clear saved courses",
+        onConfirm: clearAll,
+      }),
+    );
   };
 
   return (
@@ -400,6 +415,12 @@ const SavedCourses = () => {
           ) : null}
         </>
       ) : null}
+
+      <ConfirmDialog
+        request={confirmRequest}
+        onCancel={() => setConfirmRequest(null)}
+        busy={clearing}
+      />
     </main>
   );
 };

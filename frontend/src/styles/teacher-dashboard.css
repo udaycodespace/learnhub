@@ -104,39 +104,6 @@ body.dark-mode .read-more-link {
   color: #7dd3fc;
 }
 
-.teacher-confirm {
-  position: fixed;
-  inset: 0;
-  z-index: 2500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.55);
-}
-
-.teacher-confirm-panel {
-  max-width: 460px;
-  width: 100%;
-  padding: 24px;
-  border-radius: 14px;
-  background: #fff;
-  color: #111827;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
-}
-
-body.dark-mode .teacher-confirm-panel {
-  background: #1f2937;
-  color: #e5e7eb;
-}
-
-.teacher-confirm-panel h3 {
-  margin-top: 0;
-}
-
-.teacher-confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
+/* The confirmation panel that lived here moved to
+   components/common/ConfirmDialog.css when SavedCourses and CourseReviews
+   started sharing it (#137). */

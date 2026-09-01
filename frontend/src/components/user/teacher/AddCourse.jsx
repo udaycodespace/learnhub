@@ -2,6 +2,7 @@ import React, { useMemo, useState, useContext } from 'react';
 import { Button, Form, Col, Row } from 'react-bootstrap';
 import { UserContext } from '../../../App';
 import axiosInstance from '../../common/AxiosInstance';
+import Toast from '../../common/Toast';
 import {
    VIDEO_ACCEPT_ATTRIBUTE,
    buildCourseFormData,
@@ -35,6 +36,8 @@ import {
 // is refused against the section it belongs to at the moment it is chosen. The
 // server check is untouched and stays authoritative.
 
+const EMPTY_TOAST = { message: '', type: 'info' };
+
 const emptyCourse = () => ({
    C_title: '',
    C_categories: '',
@@ -57,6 +60,7 @@ const AddCourse = () => {
    // Price and category, marked on the fields themselves rather than only
    // summarised in the form-level message (#135).
    const [detailErrors, setDetailErrors] = useState({});
+   const [toast, setToast] = useState(EMPTY_TOAST);
 
    // The server takes the owner and the educator name from the bearer token, so
    // neither is posted any more. It used to read `userId` straight out of this
@@ -206,7 +210,14 @@ const AddCourse = () => {
          );
 
          if (res.data.success) {
-            alert(res.data.message);
+            // The alert fired after an upload that may have taken minutes,
+            // blocked the tab, and was then followed by the form being reset —
+            // so dismissing it left an empty form and no evidence the course
+            // had been created (#137).
+            setToast({
+               message: res.data.message || 'Course created.',
+               type: 'success',
+            });
             setAddCourse(emptyCourse());
          } else {
             setFormError(res.data.message || 'Failed to create course.');
@@ -422,6 +433,12 @@ const AddCourse = () => {
                {submitting ? 'Creating…' : 'Submit'}
             </Button>
          </Form>
+
+         <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(EMPTY_TOAST)}
+         />
       </div>
    );
 };

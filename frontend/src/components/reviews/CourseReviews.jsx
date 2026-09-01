@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axiosInstance, { getToken } from "../common/AxiosInstance";
 import RatingStars from "./RatingStars";
+import ConfirmDialog from "../common/ConfirmDialog";
+import { createConfirmRequest } from "../../lib/confirmDialog";
 import {
   canShowReviewForm,
   readEligibility,
@@ -46,6 +48,7 @@ const CourseReviews = ({ courseId, courseTitle }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [confirmRequest, setConfirmRequest] = useState(null);
 
   const loadReviews = useCallback(async () => {
     if (!courseId) return;
@@ -153,10 +156,25 @@ const CourseReviews = ({ courseId, courseTitle }) => {
     }
   };
 
+  // window.confirm blocked the tab, was not announced, could not be themed,
+  // and gave a permanent deletion the same OK/Cancel as everything else (#137).
+  const askToRemoveReview = () => {
+    if (!myReview) return;
+
+    setConfirmRequest(
+      createConfirmRequest({
+        title: "Delete your review?",
+        consequence: `Your rating and any text you wrote about “${courseTitle || "this course"}” will be removed, and the course average will be recalculated without it. This cannot be undone.`,
+        confirmLabel: "Delete review",
+        onConfirm: removeReview,
+      }),
+    );
+  };
+
   const removeReview = async () => {
     if (!myReview) return;
-    if (!window.confirm("Delete your review permanently?")) return;
 
+    setConfirmRequest(null);
     setSaving(true);
     setError("");
     setNotice("");
@@ -249,7 +267,11 @@ const CourseReviews = ({ courseId, courseTitle }) => {
                 <button type="button" onClick={() => setEditing(true)}>
                   Edit
                 </button>
-                <button type="button" onClick={removeReview} disabled={saving}>
+                <button
+                  type="button"
+                  onClick={askToRemoveReview}
+                  disabled={saving}
+                >
                   Delete
                 </button>
               </div>
@@ -386,6 +408,12 @@ const CourseReviews = ({ courseId, courseTitle }) => {
           </button>
         </nav>
       ) : null}
+
+      <ConfirmDialog
+        request={confirmRequest}
+        onCancel={() => setConfirmRequest(null)}
+        busy={saving}
+      />
     </section>
   );
 };
