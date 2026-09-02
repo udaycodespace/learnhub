@@ -16,7 +16,14 @@
 const {
   FREE_PRICE_LABEL,
   normalizeCoursePrice,
+  parseCoursePrice,
 } = require("./coursePricing");
+const {
+  COURSE_CATEGORIES,
+  categoryErrorMessage,
+  isCategoryPlaceholder,
+  normalizeCourseCategory,
+} = require("./courseCategories");
 
 const MAX_EDUCATOR_LENGTH = 100;
 const MAX_TITLE_LENGTH = 120;
@@ -149,13 +156,22 @@ function validateCourseSubmission({ body = {}, files = [], user = {} } = {}) {
     "Course title",
     MAX_TITLE_LENGTH,
   );
-  const categories = requireText(
-    errors,
-    "C_categories",
-    body.C_categories,
-    "Course category",
-    MAX_CATEGORY_LENGTH,
+  // requireText still catches blank. What it could not catch is the dropdown's
+  // own "Select categories" placeholder, which is a non-empty string and is
+  // what an untouched form submits (#135).
+  const categories = normalizeCourseCategory(
+    requireText(
+      errors,
+      "C_categories",
+      body.C_categories,
+      "Course category",
+      MAX_CATEGORY_LENGTH,
+    ),
   );
+
+  if (categories && isCategoryPlaceholder(categories)) {
+    errors.C_categories = categoryErrorMessage();
+  }
   const description = requireText(
     errors,
     "C_description",
@@ -163,6 +179,15 @@ function validateCourseSubmission({ body = {}, files = [], user = {} } = {}) {
     "Course description",
     MAX_DESCRIPTION_LENGTH,
   );
+
+  // The price was the one field that went through the normaliser and no check
+  // at all, so "abc" and "-500" were stored, advertised on the card, and
+  // written into the payments row's amount (#135).
+  const price = parseCoursePrice(asTrimmedString(body.C_price));
+
+  if (!price.valid) {
+    errors.C_price = price.reason;
+  }
 
   const uploadedFiles = Array.isArray(files) ? files : [];
 
@@ -185,9 +210,11 @@ function validateCourseSubmission({ body = {}, files = [], user = {} } = {}) {
       C_title: title,
       C_categories: categories,
       C_description: description,
-      // asTrimmedString first: a repeated multipart field arrives as an
-      // array, and the price rule takes a value rather than a form field.
-      C_price: normalizeCoursePrice(asTrimmedString(body.C_price)),
+      // parseCoursePrice has already validated this and produced the value to
+      // store — the free label for a free course, the amount without its
+      // separators or currency symbol for a paid one — so two teachers typing
+      // "Rs. 1,299" and "1299" write the same string.
+      C_price: price.normalized,
       sections: buildSections(uploadedFiles, body),
     },
   };
@@ -196,6 +223,7 @@ function validateCourseSubmission({ body = {}, files = [], user = {} } = {}) {
 const formatCourseMessage = (errors = {}) => Object.values(errors).join(". ");
 
 module.exports = {
+  COURSE_CATEGORIES,
   FREE_PRICE_LABEL,
   MAX_CATEGORY_LENGTH,
   MAX_DESCRIPTION_LENGTH,

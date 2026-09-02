@@ -34,7 +34,18 @@
 
 const { escapeRegex, normalizeText } = require("./courseListing");
 
-const ALLOWED_STATUSES = new Set(["successful", "pending", "failed"]);
+const ALLOWED_STATUSES = new Set([
+  "successful",
+  "pending",
+  "failed",
+  // #128. A student can leave a course now. The payment row is kept and
+  // marked rather than deleted — a financial record must not disappear
+  // because somebody changed their mind — so the ledger needs a bucket for
+  // it. Without one it would fall through STATUS_EXPRESSION's default and be
+  // reported as "pending", which is the wrong answer twice over: nothing is
+  // pending, and it would inflate a number an admin reads as work to do.
+  "withdrawn",
+]);
 
 const ALLOWED_SORTS = new Set([
   "newest",
@@ -52,6 +63,11 @@ const SUCCESSFUL_STATUS_VALUES = [
 ];
 
 const FAILED_STATUS_VALUES = ["failed", "declined", "rejected", "cancelled"];
+
+// Deliberately its own bucket rather than a member of FAILED_STATUS_VALUES. A
+// withdrawal is not a payment that failed: the money moved, and whether it
+// comes back is a question this application does not answer.
+const WITHDRAWN_STATUS_VALUES = ["withdrawn"];
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
@@ -193,6 +209,10 @@ const STATUS_EXPRESSION = {
           {
             case: { $in: ["$$stored", FAILED_STATUS_VALUES] },
             then: "failed",
+          },
+          {
+            case: { $in: ["$$stored", WITHDRAWN_STATUS_VALUES] },
+            then: "withdrawn",
           },
         ],
         default: "pending",
@@ -420,6 +440,7 @@ function buildSummary(buckets = []) {
     successful: 0,
     pending: 0,
     failed: 0,
+    withdrawn: 0,
     totalRevenue: 0,
   };
 
@@ -433,7 +454,9 @@ function buildSummary(buckets = []) {
       summary[status] += count;
     }
 
-    // Revenue counts successful payments only, as it always has.
+    // Revenue counts successful payments only, as it always has — and a
+    // withdrawn row is deliberately not successful, so leaving a course takes
+    // its amount back out of the total.
     if (status === "successful") {
       summary.totalRevenue += Number(bucket?.revenue) || 0;
     }
@@ -563,6 +586,7 @@ module.exports = {
   AMOUNT_EXPRESSION,
   DEFAULT_LIMIT,
   FAILED_STATUS_VALUES,
+  WITHDRAWN_STATUS_VALUES,
   MAX_LIMIT,
   MISSING_COURSE_TITLE,
   STATUS_EXPRESSION,

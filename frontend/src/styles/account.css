@@ -1,0 +1,99 @@
+/* The account panel (#126).
+
+   Its own stylesheet, imported by the component, for the reason theme.css
+   already states: several branches each appending a block to the end of one
+   shared file conflicts on every pair of them. A feature stylesheet does not.
+
+   Every colour is a token from App.css, which defines each one for both
+   themes — including --danger, added by #114 because the palette had no error
+   colour and a rejected form had nowhere to render one. */
+
+.account-panel {
+  max-width: 640px;
+  color: var(--ink);
+}
+
+.account-heading {
+  margin-bottom: 1rem;
+}
+
+.account-summary {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.account-summary > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+}
+
+.account-summary dt {
+  margin: 0;
+  font-weight: 600;
+}
+
+.account-summary dd {
+  margin: 0;
+  /* A long address must not push the panel into a horizontal scroll. */
+  overflow-wrap: anywhere;
+  color: var(--ink-soft, var(--ink));
+}
+
+.account-note {
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft, var(--ink));
+}
+
+.account-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.account-section h3 {
+  margin-bottom: 0.75rem;
+}
+
+.account-field {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.account-field > span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
+.account-field input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.account-field input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.account-field input[aria-invalid='true'] {
+  border-color: var(--danger-border, var(--danger));
+  background: var(--danger-soft, transparent);
+}
+
+.account-field-error {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--danger);
+}

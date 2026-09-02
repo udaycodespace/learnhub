@@ -19,6 +19,14 @@ const ACTIONS = Object.freeze({
   LOGIN: "login",
   LOGOUT: "logout",
   LOGIN_FAILED: "login_failed",
+  // #126. An account can be edited by its owner now, and the log is the only
+  // place that can answer "was this account's password changed, and from
+  // where" — the successor to the question #87 added login_failed for.
+  // password_change_failed is the one that matters most: a run of them against
+  // a signed-in account is somebody working on a session they should not have.
+  PASSWORD_CHANGED: "password_changed",
+  PASSWORD_CHANGE_FAILED: "password_change_failed",
+  PROFILE_UPDATED: "profile_updated",
 });
 
 const normalizeRole = (role) =>

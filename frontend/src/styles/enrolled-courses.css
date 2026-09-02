@@ -1,0 +1,65 @@
+/* Leaving a course (#128).
+
+   Its own stylesheet rather than a reach into teacher-dashboard.css, which is
+   where the `teacher-confirm` dialog these rules are modelled on lives. That
+   file is imported by TeacherHome and belongs to the educator dashboard;
+   importing it from a student page to borrow three classes would couple two
+   features that have nothing else to do with each other.
+
+   Colours come from the App.css tokens, which are defined for both themes. */
+
+.enrolled-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* The Action column is the narrowest one; two controls wrap rather than
+     forcing the table into a horizontal scroll. */
+  flex-wrap: wrap;
+}
+
+.leave-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.leave-confirm-panel {
+  width: 100%;
+  max-width: 460px;
+  padding: 24px;
+  border-radius: 14px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+}
+
+body.dark-mode .leave-confirm-panel {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+.leave-confirm-panel h3 {
+  margin-top: 0;
+}
+
+.leave-course-consequences {
+  margin: 0 0 20px;
+  padding-left: 20px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.leave-course-consequences li + li {
+  margin-top: 4px;
+}
+
+.leave-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

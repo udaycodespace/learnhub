@@ -316,6 +316,39 @@
   display: none;
 }
 
+/* The badge is the way into a course's reviews from the catalogue (#136). As a
+   button it has to lose the UA chrome without losing the fact that it is one:
+   the cursor, the hover and a real focus ring carry that. */
+.course-rating-badge.is-interactive {
+  padding: 2px 6px;
+  margin: 9px -6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.course-rating-badge.is-interactive:hover,
+.course-rating-badge.is-interactive:focus-visible {
+  background: var(--review-hover-bg, rgba(127, 127, 127, 0.14));
+  color: var(--review-ink);
+}
+
+.course-rating-badge.is-interactive:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* The reviews panel on the course player, below the sections and the video. */
+.course-player-reviews {
+  max-width: 1180px;
+  margin: 28px auto 48px;
+  padding: 0 16px;
+}
+
 .sr-only {
   width: 1px;
   height: 1px;

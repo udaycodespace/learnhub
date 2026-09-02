@@ -86,6 +86,125 @@ function isPaidCourse(course) {
 
 const MAX_PRICE_LENGTH = 40;
 
+// A course cannot cost more than this. Not a business rule so much as a bound:
+// without one, "999999999999" is a valid price and the payments dashboard
+// totals it.
+const MAX_COURSE_PRICE = 1000000;
+
+// A non-free price, once the currency noise is off it: digits, optionally a
+// decimal point and one or two places. No sign — a negative price is not a
+// discount, it is a course that pays the student — and no exponent, because
+// "1e9" is a number JavaScript understands and not a price anybody typed.
+const PRICE_PATTERN = /^\d+(?:\.\d{1,2})?$/;
+
+// Thousands separators and a leading currency symbol are how people write
+// prices, and refusing them would be pedantry. They are stripped before the
+// pattern is applied and are not part of what gets stored.
+const PRICE_NOISE_PATTERN = /[\s,\u20B9$\u20AC\u00A3]|(?:^rs\.?)/gi;
+
+/**
+ * Decides whether a submitted price is one the platform can charge.
+ *
+ * `normalizeCoursePrice` answers "what do we store"; it collapsed every free
+ * form to one label and passed everything else through untouched, so "abc",
+ * "-500" and "<script>" were all stored, advertised on the catalogue card,
+ * classified paid, and written into the payments row's `amount` (#135). This
+ * is the question that was never asked.
+ *
+ * A free price is valid and has no amount — that is the case
+ * `normalizeCoursePrice` already handles and this does not second-guess.
+ *
+ * @param {unknown} value the submitted `C_price`
+ * @param {object} [options]
+ * @param {number} [options.max] the ceiling, in whole currency units
+ * @returns {{valid: boolean, free: boolean, amount: number|null,
+ *            normalized: string|null, reason: string|null}}
+ */
+function parseCoursePrice(value, { max = MAX_COURSE_PRICE } = {}) {
+  if (isFreePrice(value)) {
+    return {
+      valid: true,
+      free: true,
+      amount: 0,
+      normalized: FREE_PRICE_LABEL,
+      reason: null,
+    };
+  }
+
+  const raw = String(value).trim();
+
+  if (raw.length > MAX_PRICE_LENGTH) {
+    return {
+      valid: false,
+      free: false,
+      amount: null,
+      normalized: null,
+      reason: `Price must be at most ${MAX_PRICE_LENGTH} characters`,
+    };
+  }
+
+  const cleaned = raw.replace(PRICE_NOISE_PATTERN, "");
+
+  if (!PRICE_PATTERN.test(cleaned)) {
+    return {
+      valid: false,
+      free: false,
+      amount: null,
+      normalized: null,
+      reason:
+        "Price must be a number, for example 499 or 499.00. Enter 0 for a free course",
+    };
+  }
+
+  const amount = Number(cleaned);
+
+  // The pattern already excludes NaN and Infinity; this catches a value long
+  // enough to lose precision before it reaches the database.
+  if (!Number.isFinite(amount)) {
+    return {
+      valid: false,
+      free: false,
+      amount: null,
+      normalized: null,
+      reason: "Price is not a number this platform can charge",
+    };
+  }
+
+  if (amount > max) {
+    return {
+      valid: false,
+      free: false,
+      amount: null,
+      normalized: null,
+      reason: `Price must be at most ${max}`,
+    };
+  }
+
+  // `isFreePrice` has already claimed everything that reads as zero, so
+  // reaching here with 0 means a form like "0.000" that the free pattern's
+  // one-or-more-zeros branch did not match. It is still free.
+  if (amount === 0) {
+    return {
+      valid: true,
+      free: true,
+      amount: 0,
+      normalized: FREE_PRICE_LABEL,
+      reason: null,
+    };
+  }
+
+  return {
+    valid: true,
+    free: false,
+    amount,
+    // Stored without the separators and the symbol it may have arrived with,
+    // so two teachers typing "Rs. 1,299" and "1299" produce the same string
+    // and the catalogue's price column can be compared.
+    normalized: cleaned,
+    reason: null,
+  };
+}
+
 /**
  * The value to persist for a submitted price.
  *
@@ -184,7 +303,10 @@ function accessTypeExpression(priceField = "$course.C_price") {
 module.exports = {
   FREE_PRICE_LABEL,
   FREE_PRICE_PATTERN,
+  MAX_COURSE_PRICE,
   MAX_PRICE_LENGTH,
+  PRICE_PATTERN,
+  parseCoursePrice,
   accessTypeExpression,
   formatPriceLabel,
   freePriceFilterClauses,

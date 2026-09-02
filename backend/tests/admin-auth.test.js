@@ -32,6 +32,15 @@ function buildAdminApp() {
   instance.use(express.json());
   instance.use("/api/admin", require("../routers/adminRoutes"));
 
+  // #125. Reports whatever authMiddleware put on the request, so the account
+  // in the login response and the server's own view of the caller can be
+  // compared directly rather than assumed to match.
+  instance.get(
+    "/probe/whoami",
+    require("../middlewares/authMiddleware"),
+    (req, res) => res.status(200).send({ success: true, user: req.user }),
+  );
+
   return instance;
 }
 
@@ -183,6 +192,84 @@ test("a plaintext admin password is refused in production", async () => {
     process.env.NODE_ENV = "test";
     delete process.env.ADMIN_PASSWORD;
   }
+});
+
+
+// -- #125: the response has to carry an account, not only a token -------------
+//
+// The endpoint returned `{ success, token, message }`. The browser needs both
+// halves — `parseStoredUser` requires an object with an id and `readSession`
+// refuses a token without one — so the admin dashboard could not be reached
+// even by an operator who called this endpoint by hand.
+
+test("admin login returns an account beside the token", async () => {
+  const response = await login({
+    username: ADMIN_USERNAME,
+    password: ADMIN_PASSWORD,
+  });
+
+  assert.equal(response.status, 200);
+
+  const account = response.body.userData;
+
+  assert.ok(account, "the response carried no account");
+  assert.ok(account._id || account.id, "the account has no id to store");
+  assert.equal(account.type, "admin");
+  assert.equal(account.name, ADMIN_USERNAME);
+});
+
+test("the returned account satisfies what parseStoredUser requires", async () => {
+  const { body } = await login({
+    username: ADMIN_USERNAME,
+    password: ADMIN_PASSWORD,
+  });
+
+  // The browser's rule, restated on this side so the two cannot drift: an
+  // object, not an array, carrying an id — and it has to survive the round
+  // trip through JSON that localStorage puts it through.
+  const stored = JSON.parse(JSON.stringify(body.userData));
+
+  assert.equal(typeof stored, "object");
+  assert.equal(Array.isArray(stored), false);
+  assert.ok(stored._id || stored.id);
+});
+
+test("the account in the response is the account authMiddleware builds", async () => {
+  const { body } = await login({
+    username: ADMIN_USERNAME,
+    password: ADMIN_PASSWORD,
+  });
+
+  const probe = await request(app)
+    .get("/probe/whoami")
+    .set("Authorization", `Bearer ${body.token}`);
+
+  assert.equal(probe.status, 200);
+  assert.equal(probe.body.user._id, body.userData._id);
+  assert.equal(probe.body.user.type, body.userData.type);
+  assert.equal(probe.body.user.role, body.userData.role);
+  assert.equal(probe.body.user.name, body.userData.name);
+});
+
+test("a rejected sign-in carries no account", async () => {
+  const response = await login({
+    username: ADMIN_USERNAME,
+    password: "wrong",
+  });
+
+  assert.equal(response.status, 401);
+  assert.equal(response.body.userData, undefined);
+  assert.equal(response.body.token, undefined);
+});
+
+test("the sign-in response never carries the configured password or its hash", async () => {
+  const { text } = await login({
+    username: ADMIN_USERNAME,
+    password: ADMIN_PASSWORD,
+  });
+
+  assert.doesNotMatch(text, new RegExp(ADMIN_PASSWORD));
+  assert.doesNotMatch(text, /\$2[aby]\$/);
 });
 
 test("GET /getallusers never returns password, otp or reset token fields", async () => {

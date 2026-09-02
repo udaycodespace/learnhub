@@ -38,6 +38,9 @@ const ACTIVITY_LABELS = {
   login: "Login",
   logout: "Logout",
   login_failed: "Failed login",
+  password_changed: "Password changed",
+  password_change_failed: "Failed password change",
+  profile_updated: "Profile updated",
 };
 
 const activityLabel = (activity) =>
@@ -224,6 +227,11 @@ const ActivityLogs = () => {
             <option value="login">Login</option>
             <option value="logout">Logout</option>
             <option value="login_failed">Failed login</option>
+            <option value="password_changed">Password changed</option>
+            <option value="password_change_failed">
+              Failed password change
+            </option>
+            <option value="profile_updated">Profile updated</option>
           </select>
         </label>
 

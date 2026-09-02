@@ -11,8 +11,17 @@ const activityLogSchema = new mongoose.Schema(
     action: {
       type: String,
       // login_failed is what lets the log answer the question an audit log
-      // exists for: was there a burst of attempts against this account.
-      enum: ["login", "logout", "login_failed"],
+      // exists for: was there a burst of attempts against this account. The
+      // account events (#126) are the same question asked of a session that is
+      // already signed in.
+      enum: [
+        "login",
+        "logout",
+        "login_failed",
+        "password_changed",
+        "password_change_failed",
+        "profile_updated",
+      ],
       required: true,
       index: true,
     },

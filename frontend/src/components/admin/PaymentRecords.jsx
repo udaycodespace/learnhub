@@ -47,6 +47,11 @@ const PaymentRecords = () => {
     successful: 0,
     pending: 0,
     failed: 0,
+    // #128. A student can leave a course now, and the payment row is kept and
+    // marked rather than deleted. Without a bucket of its own it would be
+    // counted as pending — nothing is pending, and it would inflate a number
+    // an admin reads as work to do.
+    withdrawn: 0,
     totalRevenue: 0,
   });
   const [pagination, setPagination] = useState({
@@ -187,6 +192,12 @@ const PaymentRecords = () => {
       tone: "orange",
     },
     {
+      label: "Withdrawn",
+      value: summary.withdrawn,
+      hint: "Learner left the course",
+      tone: "ink",
+    },
+    {
       label: "Mock revenue",
       value: formatCurrency(summary.totalRevenue),
       hint: "Successful transactions only",
@@ -252,6 +263,7 @@ const PaymentRecords = () => {
             <option value="successful">Successful</option>
             <option value="pending">Pending</option>
             <option value="failed">Failed</option>
+            <option value="withdrawn">Withdrawn</option>
           </select>
         </label>
 

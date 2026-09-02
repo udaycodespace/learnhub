@@ -151,3 +151,40 @@ export function describeEnrolledRange(pagination, shown) {
 
   return `Showing ${first}–${last} of ${totalItems} ${noun}`;
 }
+
+/**
+ * What leaving a course actually costs, as a sentence.
+ *
+ * #128. There was no way to leave one at all: an enrolment row was only ever
+ * created, and the only deletes are in the cascade for a deleted course or a
+ * deleted account. So a free course joined by one click — `handleEnroll` skips
+ * the payment modal entirely for a free course, so there is no confirmation
+ * step — stayed on this table for the life of the account.
+ *
+ * The confirmation names what goes and what stays, because it is not
+ * reversible and the two are not obvious. Progress lives on the enrolment row,
+ * so it goes with it; the payment record is kept and marked, because a
+ * financial record must not disappear because somebody changed their mind.
+ *
+ * @param {object} row a row from the enrolled-courses table
+ * @returns {string[]} one sentence per consequence
+ */
+export function describeWithdrawal(row) {
+  const { completed } = readProgress(row);
+
+  const lines = [];
+
+  if (completed > 0) {
+    lines.push(
+      `Your progress through ${completed} section${completed === 1 ? '' : 's'} will be lost.`,
+    );
+  }
+
+  lines.push('Any review you left for this course will be removed.');
+  lines.push(
+    'Your payment record is kept and marked as withdrawn; this does not request a refund.',
+  );
+  lines.push('You can enrol again from the catalogue.');
+
+  return lines;
+}

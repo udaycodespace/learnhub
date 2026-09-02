@@ -30,6 +30,12 @@
 // spending four minutes uploading it is not the same as duplicating a security
 // boundary.
 
+import { parseCoursePrice } from './coursePricing.js';
+import {
+  categoryErrorMessage,
+  isUsableCourseCategory,
+} from './courseCategories.js';
+
 export const ALLOWED_VIDEO_EXTENSION = '.mp4';
 
 // ALLOWED_MP4_MIME_TYPES in backend/utils/videoUpload.js.
@@ -220,14 +226,56 @@ export function validateSection(section = {}, limits = uploadLimits()) {
  * @param {object} [limits]
  * @returns {{ valid: boolean, formError: string, sectionErrors: object }}
  */
+/**
+ * The course-level fields the form can check without the server.
+ *
+ * Price and category were checked by neither side (#135): the API required
+ * only that the category be a non-empty string — which the dropdown's own
+ * placeholder is — and did not look at the price at all. The category is not
+ * restricted to the three the dropdown offers; only the placeholder and blank
+ * are refused.
+ *
+ * @param {object} course
+ * @returns {object} field name → message, empty when they are both fine
+ */
+export function validateCourseDetails(course = {}) {
+  const errors = {};
+
+  if (!isUsableCourseCategory(course.C_categories)) {
+    errors.C_categories = categoryErrorMessage();
+  }
+
+  const price = parseCoursePrice(course.C_price);
+
+  if (!price.valid) {
+    errors.C_price = price.reason;
+  }
+
+  return errors;
+}
+
 export function validateCourseUpload(course = {}, limits = uploadLimits()) {
   const sections = Array.isArray(course.sections) ? course.sections : [];
   const sectionErrors = {};
+
+  // Before the section checks: a bad price is worth catching before several
+  // hundred megabytes go up, which is the whole point of mirroring the rule.
+  const detailErrors = validateCourseDetails(course);
+
+  if (Object.keys(detailErrors).length > 0) {
+    return {
+      valid: false,
+      formError: Object.values(detailErrors).join('. '),
+      detailErrors,
+      sectionErrors,
+    };
+  }
 
   if (sections.length === 0) {
     return {
       valid: false,
       formError: 'Add at least one section with an .mp4 video.',
+      detailErrors: {},
       sectionErrors,
     };
   }
@@ -236,6 +284,7 @@ export function validateCourseUpload(course = {}, limits = uploadLimits()) {
     return {
       valid: false,
       formError: `A course can have at most ${limits.maxSectionVideos} sections. Remove ${sections.length - limits.maxSectionVideos} before submitting.`,
+      detailErrors: {},
       sectionErrors,
     };
   }
@@ -251,7 +300,7 @@ export function validateCourseUpload(course = {}, limits = uploadLimits()) {
   const failed = Object.keys(sectionErrors);
 
   if (failed.length === 0) {
-    return { valid: true, formError: '', sectionErrors };
+    return { valid: true, formError: '', detailErrors: {}, sectionErrors };
   }
 
   const numbers = failed.map((index) => Number(index) + 1);
@@ -262,6 +311,7 @@ export function validateCourseUpload(course = {}, limits = uploadLimits()) {
       numbers.length === 1
         ? `Section ${numbers[0]} needs attention before this course can be created.`
         : `Sections ${numbers.join(', ')} need attention before this course can be created.`,
+    detailErrors: {},
     sectionErrors,
   };
 }

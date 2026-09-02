@@ -6,6 +6,7 @@ import SavedCoursesNavLink from "../bookmarks/SavedCoursesNavLink";
 import ThemeToggle from "../../theme/ThemeToggle";
 import axiosInstance, { clearSession } from "./AxiosInstance";
 import { panelPath, visiblePanelLinks } from "../../lib/dashboardPanels";
+import { canUseBookmarks } from "../../lib/bookmarkAccess";
 
 // #105. These links used to call a prop:
 //
@@ -61,6 +62,13 @@ const NavBar = () => {
    // validates the incoming panel against — the navbar cannot advertise a link
    // the dashboard would refuse to open.
    const panelLinks = visiblePanelLinks(user.userData);
+
+   // The Saved link was the one navbar entry outside the rule the panel links
+   // follow. It rendered for every signed-in account, and `/saved-courses` is
+   // guarded to students — so an educator clicking it went to the guard and
+   // straight back to /dashboard, having also produced a 403 in the console
+   // on every page load from BookmarksProvider (#115).
+   const showSavedCourses = canUseBookmarks(user.userData);
 
    const handleLogout = async () => {
       // Tell the server first, so the sign-out is recorded — the activity log
@@ -135,7 +143,9 @@ const NavBar = () => {
                </Nav>
                <Nav className="premium-nav-links" style={{alignItems:'center'}}>
                   <h5 className='mx-3' style={{color:'#00e0ff', fontWeight:700, textShadow:'0 2px 12px #00e0ff55', margin:0, display:'flex', alignItems:'center'}}>Hi {user.userData.name}</h5>
-                  <SavedCoursesNavLink className="me-3" />
+                  {showSavedCourses ? (
+                     <SavedCoursesNavLink className="me-3" />
+                  ) : null}
                   <Button onClick={handleLogout} size='sm' className='logout-btn' style={{background:'linear-gradient(90deg,#ff5858 0%,#f09819 100%)', color:'#fff', border:'none', boxShadow:'0 0 12px #ff585855'}}>
                     Log Out
                   </Button>

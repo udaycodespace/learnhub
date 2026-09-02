@@ -10,6 +10,12 @@ import React, {
 import axiosInstance, {
   getToken,
 } from "../components/common/AxiosInstance";
+import { useAuth } from "../auth/authContext";
+import {
+  bookmarkDenialMessage,
+  bookmarkDenialReason,
+  shouldLoadBookmarks,
+} from "../lib/bookmarkAccess";
 import {
   adjustTotal,
   applyClear,
@@ -51,7 +57,20 @@ export const BookmarksProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
 
-  const isAuthenticated = Boolean(getToken());
+  // This provider wraps the whole application, so anything it does on mount it
+  // does on every page. It used to fetch the wishlist for anyone holding a
+  // token, and `/api/bookmarks` is student-only, so an educator or an admin
+  // paid one failed authenticated round trip per page load and got a 403 in
+  // the console for it (#115).
+  //
+  // The session comes from AuthProvider rather than from a bare getToken(),
+  // because the role is the thing being asked about and readSession is what
+  // validates the token it came with. getToken stays imported for the same
+  // reason it always was — the axios interceptor owns the storage keys.
+  const { user, isAuthenticated: hasSession } = useAuth();
+
+  const isAuthenticated = hasSession && Boolean(getToken());
+  const enabled = shouldLoadBookmarks(user, isAuthenticated);
 
   // Ids seen this tick, waiting to be asked about together.
   const queuedIds = useRef(new Set());
@@ -146,7 +165,10 @@ export const BookmarksProvider = ({ children }) => {
    */
   const trackCourses = useCallback(
     (courseIds) => {
-      if (!isAuthenticated) return;
+      // `enabled`, not `isAuthenticated`. A teacher browsing the catalogue
+      // holds a valid token, so the old check let a page of cards queue a
+      // batch that `/api/bookmarks/status` answers 403 for (#115).
+      if (!enabled) return;
 
       const list = Array.isArray(courseIds) ? courseIds : [courseIds];
       let queued = false;
@@ -166,7 +188,7 @@ export const BookmarksProvider = ({ children }) => {
 
       flushHandle.current = setTimeout(flushQueue, 0);
     },
-    [flushQueue, isAuthenticated],
+    [enabled, flushQueue],
   );
 
   /**
@@ -178,7 +200,12 @@ export const BookmarksProvider = ({ children }) => {
    * numbers.
    */
   const refreshBookmarks = useCallback(async () => {
-    if (!isAuthenticated) {
+    // Not just "signed out". An educator or an admin holds a valid token and
+    // still has no wishlist, and asking for one costs a 403 on every page load
+    // (#115). `ready` still settles either way — anything waiting on it, such
+    // as a page deciding whether to render an empty state, would otherwise
+    // wait forever.
+    if (!enabled) {
       resetQueues();
       setStatus(emptyStatus());
       setTotal(0);
@@ -210,7 +237,7 @@ export const BookmarksProvider = ({ children }) => {
         setReady(true);
       }
     }
-  }, [isAuthenticated, resetQueues]);
+  }, [enabled, resetQueues]);
 
   useEffect(() => {
     // Signing in or out invalidates every cached answer, including the negative
@@ -258,9 +285,14 @@ export const BookmarksProvider = ({ children }) => {
 
   const toggleBookmark = useCallback(
     async (courseId) => {
-      if (!isAuthenticated) {
-        const error = new Error("Sign in to save courses.");
-        error.code = "AUTH_REQUIRED";
+      // Two reasons used to be one. A signed-out visitor is sent to the login
+      // screen — the feature is theirs. An educator cannot get one by signing
+      // in again, and firing the request only to be told 403 helps nobody.
+      const denial = bookmarkDenialReason(user, isAuthenticated);
+
+      if (denial) {
+        const error = new Error(bookmarkDenialMessage(denial));
+        error.code = denial === "signed-out" ? "AUTH_REQUIRED" : "ROLE_REQUIRED";
         throw error;
       }
 
@@ -290,7 +322,7 @@ export const BookmarksProvider = ({ children }) => {
         throw error;
       }
     },
-    [isAuthenticated, setBookmarkLocally],
+    [isAuthenticated, setBookmarkLocally, user],
   );
 
   const removeBookmark = useCallback(
@@ -354,6 +386,9 @@ export const BookmarksProvider = ({ children }) => {
       loading,
       ready,
       isAuthenticated,
+      // Whether this session has a wishlist at all, so a consumer can render
+      // nothing rather than a control that cannot work.
+      enabled,
     }),
     [
       status,
@@ -367,6 +402,7 @@ export const BookmarksProvider = ({ children }) => {
       loading,
       ready,
       isAuthenticated,
+      enabled,
     ],
   );
 
