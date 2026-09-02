@@ -321,6 +321,11 @@ test("an empty result set summarises as zeroes, not as NaN", () => {
     successful: 0,
     pending: 0,
     failed: 0,
+    // #128 added this bucket. A student can leave a course now, and the
+    // payment row is kept and marked rather than deleted, so it needs
+    // somewhere to be counted that is not `pending` — nothing is pending, and
+    // pending is a number an admin reads as work to do.
+    withdrawn: 0,
     totalRevenue: 0,
   });
   assert.deepEqual(buildSummary(undefined), buildSummary([]));

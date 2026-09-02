@@ -1,141 +1,227 @@
 # Contributing to LearnHub
 
-First off, thank you for taking the time to contribute to LearnHub. Contributions help make this project a better open-source learning space for everyone.
+Thanks for contributing to LearnHub.
 
-To keep the community healthy and productive, please follow the guidelines below before opening an issue or pull request.
+Before contributing, please read our [Code of Conduct](CODE_OF_CONDUCT.md) and follow the guidelines below.
 
-## Table of Contents
+> [!TIP]
+> **First contribution?** Introduce yourself briefly and mention what you are interested in. You do not need to mention your GitHub username. This helps maintainers understand your interests when assigning issues.
 
-- [How to Participate](#how-to-participate)
-- [Branch Naming Convention](#branch-naming-convention)
-- [Local Development Setup](#local-development-setup)
-- [Commit Message Guidelines](#commit-message-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Issue Assignment Policy](#issue-assignment-policy)
-- [Code Style and Quality](#code-style-and-quality)
-- [ECSoC Contribution Rules](#ecsoc-contribution-rules)
+## How to contribute
 
----
-
-## How to Participate
-
-1. **Star the repository** to support the project.
-2. **Fork the repository** to your GitHub account.
-3. **Clone your fork** locally and start working.
-
-```bash
-git clone https://github.com/YOUR_USERNAME/learnhub.git
-cd learnhub
+```mermaid
+flowchart LR
+    A[Find or raise issue] --> B[Explain approach]
+    B --> C["/claim"]
+    C --> D{Assigned?}
+    D -->|Yes| E[Work on issue]
+    D -->|No| F[Ask admin]
+    F --> E
+    E --> G[Open PR]
+    G --> H[Review]
+    H --> I{Changes requested?}
+    I -->|Yes| J[Make changes]
+    J --> H
+    I -->|No| K[PR merged]
 ```
 
-4. **Set up the upstream remote** so your fork stays synced with the main repository.
+### Found a problem?
 
-```bash
-git remote add upstream https://github.com/udaycodespace/learnhub.git
+If you find a bug or missing feature, open an issue and explain:
+
+* What is wrong?
+* How can it be reproduced?
+* What should happen?
+* How you plan to fix it, if you know.
+
+If you want to work on an existing issue, read it first and comment with your approach.
+
+## Claiming an issue
+
+After explaining your approach, use `/claim` in a **separate comment**.
+
+```text
+I will fix the login issue by updating the token validation and testing expired sessions.
+
+/claim
 ```
 
-5. **Read the Code of Conduct and this guide** before contributing.
-6. **Comment on the issue** to express interest and wait for assignment before starting work.
+Keep `/claim` in its own comment so the automation can detect it.
 
----
+> [!NOTE]
+> If `/claim` does not work because the automation or GitHub token is unavailable, do not keep retrying. Leave your approach in the issue and an admin can assign it manually.
 
-## Branch Naming Convention
+If `/claim` works, wait for the issue to be assigned before starting.
 
-Create a descriptive branch using one of the following prefixes:
+To release your assignment:
 
-- `feat/` for new features, for example `feat/interactive-quizzes`.
-- `fix/` for bug fixes, for example `fix/jwt-auth-expiration`.
-- `docs/` for documentation updates, for example `docs/add-contributing-guide`.
-- `refactor/` for code restructuring, for example `refactor/user-controller-optimization`.
-- `test/` for adding or correcting tests, for example `test/admin-auth`.
-- `chore/` for build tasks, package updates, and maintenance, for example `chore/dependency-updates`.
-
----
-
-## Local Development Setup
-
-Please refer to the local setup steps in the main README to run the frontend and backend of LearnHub locally.
-
-If the project setup is unclear or blocked, ask in the issue or community channel before opening a PR.
-
----
-
-## Commit Message Guidelines
-
-We follow the Conventional Commits specification. Commit messages should follow this format:
-
-```bash
-<type>(<scope>): <short description>
+```text
+/unassign
 ```
 
-### Allowed Types
+If the automation does not work, an admin may remove the assignment manually.
 
-- `feat`: A new feature.
-- `fix`: A bug fix.
-- `docs`: Documentation changes.
-- `style`: Changes that do not affect code meaning, such as whitespace or formatting.
-- `refactor`: A code change that neither fixes a bug nor adds a feature.
-- `perf`: A code change that improves performance.
-- `test`: Adding missing tests or correcting existing tests.
-- `chore`: Changes to the build process or auxiliary tools.
+## Assignment and timelines
 
-*Example:* `feat(auth): add google oauth registration`
+| Issue        | PR timeline |
+| ------------ | ----------: |
+| Normal issue |  **4 days** |
+| Larger issue |  **6 days** |
 
----
+The timeline starts after the issue is assigned.
 
-## Pull Request Process
+After opening a PR, **1 day is available for review and requested changes**.
 
-1. **Link an issue** in every PR using `Closes #123`, `Fixes #456`, or a similar reference.
-2. **Keep PRs focused** on one issue or one clear change set.
-3. **Do not open a PR without assignment** unless a maintainer has explicitly allowed it.
-4. **Self-review your changes** before submitting.
-5. **Run checks locally** and make sure there are no lint, build, or console errors.
-6. **Describe what changed** and mention any important notes in the PR body.
+> [!TIP]
+> If you are blocked or need more time, update the issue before the deadline. If there is no meaningful progress, the issue may be unassigned and given to another contributor.
 
----
+## Branch naming
 
-## Issue Assignment Policy
+Use a clear branch name:
 
-To work on an issue, express your interest in the issue comment section using the automated command:
+| Type          | Example                     |
+| ------------- | --------------------------- |
+| Feature       | `feat/user-profile`         |
+| Bug fix       | `fix/login-error`           |
+| Documentation | `docs/contributing-guide`   |
+| Refactor      | `refactor/auth-service`     |
+| Tests         | `test/login-flow`           |
+| Chore         | `chore/update-dependencies` |
 
-- Comment `/assign` to self-assign only if the issue has no assignees yet.
-- If the issue is already assigned, do not use `/assign`. Instead, explain your approach and wait for maintainer guidance.
-- Contributors are limited to **2 concurrent open issues**.
-- Active assignments are valid for **3 days from assignment to pull request**.
-- If you cannot submit a PR within 3 days, post an update before the deadline explaining the delay.
-- A warning comment may be posted if the issue is close to the deadline with no PR activity.
-- Issues with no meaningful progress after the deadline may be unassigned to keep work moving.
+## Commits
 
----
+Use clear commit messages following this format:
 
-## Code Style and Quality
+```text
+<type>(<scope>): <description>
+```
 
-- Follow the ESLint rules defined in the frontend package.
-- Fix all lint warnings before opening a PR.
-- Do not leave console errors, debug logs, or commented-out draft code in the final submission.
-- Remove unused imports, dead code, and temporary test code before submitting.
-- Keep changes clean, minimal, and easy to review.
+Examples:
 
----
+```text
+feat(auth): add token validation
+fix(login): handle expired sessions
+docs: update setup instructions
+test(auth): add token tests
+```
 
-## ECSoC Contribution Rules
+Keep commits focused and avoid messages like:
 
-These rules help prevent farming and keep contributions meaningful:
+```text
+update
+changes
+final
+final-final
+```
 
-- Empty or trivial PRs are not accepted.
-- Pull requests with less than 20 lines of meaningful code or documentation changes are not accepted unless a maintainer has explicitly approved the scope in advance.
-- Every PR must solve a real issue, add real value, or meaningfully improve the project.
-- Trivial changes made only to gain XP will be rejected.
-- PRs must be submitted within **3 days of issue assignment**.
-- If you are blocked or need more time, comment on the issue before the 3-day deadline.
-- Only one contributor should work on a claimed issue at a time unless a maintainer says otherwise.
+## Pull requests
 
----
+Before opening a PR:
 
-## Helpful Notes
+* Link the related issue.
+* Explain what you changed.
+* Test your changes locally.
+* Fix lint and build errors.
+* Remove debug code and unnecessary files.
+* Keep the PR focused on the assigned issue.
 
-- Keep your branch focused on one issue.
-- Make commits small and clear.
-- Test your changes before opening the pull request.
-- Link the related issue in the PR description.
-- Follow the project’s label and review rules carefully.
+> [!NOTE]
+> If your PR needs changes after review, make the requested changes and update the same PR. You do not need to open another PR.
+
+## Code quality
+
+Please keep contributions clean and easy to review.
+
+* Follow the existing project structure.
+* Follow the project's linting and formatting rules.
+* Do not commit secrets, tokens, passwords, or `.env` files.
+* Avoid unnecessary dependencies.
+* Remove debug code and unused imports.
+* Add or update tests when needed.
+
+## Useful Git commands
+
+### Sync with `main`
+
+```bash
+git fetch upstream
+git rebase upstream/main
+```
+
+### Fix merge conflicts
+
+```bash
+git status
+```
+
+Fix the conflicted files, then:
+
+```bash
+git add .
+git rebase --continue
+```
+
+To cancel the rebase:
+
+```bash
+git rebase --abort
+```
+
+### Update your PR
+
+```bash
+git add .
+git commit -m "fix: resolve review feedback"
+git push
+```
+
+After a rebase:
+
+```bash
+git push --force-with-lease
+```
+
+> [!WARNING]
+> Use `--force-with-lease` instead of `--force`. Never force-push to `main`.
+
+## Keep contributions meaningful
+
+Please do not:
+
+* Open empty or meaningless PRs.
+* Copy another contributor's active work.
+* Create duplicate accounts to gain an advantage.
+* Manipulate issues, assignments, labels, reviews, or contribution tracking.
+* Add unrelated changes to an assigned issue.
+* Copy code without understanding or proper attribution.
+* Make changes only to increase activity, XP, or recognition.
+
+If an issue is unclear or already being worked on, ask before starting.
+
+## Open source programs
+
+If LearnHub is part of an open source program and you are contributing through that program, you must follow **both**:
+
+1. LearnHub's [Code of Conduct](CODE_OF_CONDUCT.md) and contribution guidelines.
+2. The open source program's Code of Conduct, terms, conditions, and contribution rules.
+
+> [!IMPORTANT]
+> Program specific rules also apply to your participation. Following LearnHub's rules does not replace the rules of the external program.
+
+## Quick checklist
+
+Before opening your PR:
+
+* [ ] I understand the issue.
+* [ ] I explained my approach.
+* [ ] I used `/claim` separately.
+* [ ] The issue is assigned to me.
+* [ ] My branch follows the naming convention.
+* [ ] I tested my changes.
+* [ ] I fixed lint/build errors.
+* [ ] My PR is focused.
+* [ ] I linked the issue.
+* [ ] I followed the applicable Code of Conduct and program rules.
+
+> [!TIP]
+> If you are unsure about something, ask before starting. A short question can save you from redoing the work later.

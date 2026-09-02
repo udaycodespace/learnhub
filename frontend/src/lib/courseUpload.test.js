@@ -34,6 +34,17 @@ const section = (overrides = {}) => ({
   ...overrides,
 });
 
+// validateCourseUpload checks the course-level fields too since #135, so the
+// section tests below supply a valid price and category and go on testing
+// sections. The detail rules have their own file, lib/courseDetails.test.js.
+const course = (overrides = {}) => ({
+  C_title: 'Intro to Testing',
+  C_categories: 'IT & Software',
+  C_price: '499',
+  C_description: 'A short course.',
+  ...overrides,
+});
+
 // -- the rules mirror the server's -------------------------------------------
 
 // backend/utils/videoUpload.js: extension === ".mp4" && ALLOWED_MP4_MIME_TYPES
@@ -215,9 +226,9 @@ test('a section with a bad file reports it against the file field', () => {
 // -- the whole submission ----------------------------------------------------
 
 test('a valid course passes', () => {
-  const result = validateCourseUpload({
-    sections: [section(), section()],
-  });
+  const result = validateCourseUpload(
+    course({ sections: [section(), section()] }),
+  );
 
   assert.equal(result.valid, true);
   assert.equal(result.formError, '');
@@ -225,7 +236,7 @@ test('a valid course passes', () => {
 });
 
 test('a course with no sections is refused', () => {
-  const result = validateCourseUpload({ sections: [] });
+  const result = validateCourseUpload(course({ sections: [] }));
 
   assert.equal(result.valid, false);
   assert.match(result.formError, /at least one section/);
@@ -238,7 +249,7 @@ test('too many sections is caught before anything is uploaded', () => {
     () => section(),
   );
 
-  const result = validateCourseUpload({ sections });
+  const result = validateCourseUpload(course({ sections }));
 
   assert.equal(result.valid, false);
   assert.match(result.formError, /at most 20 sections/);
@@ -247,13 +258,15 @@ test('too many sections is caught before anything is uploaded', () => {
 
 // The point of the whole change: say which section.
 test('one bad section is named by number', () => {
-  const result = validateCourseUpload({
-    sections: [
-      section(),
-      section({ S_content: videoFile({ name: 'b.mov', type: 'video/quicktime' }) }),
-      section(),
-    ],
-  });
+  const result = validateCourseUpload(
+    course({
+      sections: [
+        section(),
+        section({ S_content: videoFile({ name: 'b.mov', type: 'video/quicktime' }) }),
+        section(),
+      ],
+    }),
+  );
 
   assert.equal(result.valid, false);
   assert.match(result.formError, /Section 2/);
@@ -263,19 +276,22 @@ test('one bad section is named by number', () => {
 });
 
 test('several bad sections are all named, not just the first', () => {
-  const result = validateCourseUpload({
-    sections: [
-      section({ S_title: '' }),
-      section(),
-      section({ S_content: undefined }),
-    ],
-  });
+  const result = validateCourseUpload(
+    course({
+      sections: [
+        section({ S_title: '' }),
+        section(),
+        section({ S_content: undefined }),
+      ],
+    }),
+  );
 
   assert.match(result.formError, /Sections 1, 3/);
   assert.equal(Object.keys(result.sectionErrors).length, 2);
 });
 
 test('a missing sections array is refused rather than throwing', () => {
+  assert.equal(validateCourseUpload(course()).valid, false);
   assert.equal(validateCourseUpload({}).valid, false);
   assert.equal(validateCourseUpload().valid, false);
 });

@@ -15,6 +15,8 @@ import {
 import axiosInstance from '../common/AxiosInstance';
 import CatalogPager from '../common/CatalogPager';
 import Toast from '../common/Toast';
+import ConfirmDialog from '../common/ConfirmDialog';
+import { createConfirmRequest } from '../../lib/confirmDialog';
 import PaymentRecords from './PaymentRecords';
 import ActivityLogs from './ActivityLogs';
 import useAdminList from '../../hooks/useAdminList';
@@ -307,32 +309,19 @@ const AdminHome = () => {
         </section>
       )}
 
-      {pendingDelete ? (
-        <div
-          className="teacher-confirm"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="admin-user-confirm-title"
-        >
-          <div className="teacher-confirm-panel">
-            <h3 id="admin-user-confirm-title">Delete this account?</h3>
-            <p>
-              {pendingDelete.name} ({pendingDelete.email}) will be removed,
-              along with their enrolments, payments, reviews, bookmarks and
-              activity log — and, for an educator, their courses and every
-              section video on disk. This cannot be undone.
-            </p>
-            <div className="teacher-confirm-actions">
-              <Button variant="outlined" onClick={() => setPendingDelete(null)} autoFocus>
-                Cancel
-              </Button>
-              <Button variant="contained" color="error" onClick={confirmDelete}>
-                Delete account
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmDialog
+        request={
+          pendingDelete
+            ? createConfirmRequest({
+                title: "Delete this account?",
+                consequence: `${pendingDelete.name} (${pendingDelete.email}) will be removed, along with their enrolments, payments, reviews, bookmarks and activity log — and, for an educator, their courses and every section video on disk. This cannot be undone.`,
+                confirmLabel: "Delete account",
+                onConfirm: confirmDelete,
+              })
+            : null
+        }
+        onCancel={() => setPendingDelete(null)}
+      />
 
       <Toast message={toast.message} type={toast.type} onClose={dismissToast} />
     </main>

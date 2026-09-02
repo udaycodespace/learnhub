@@ -103,18 +103,35 @@ test('a signed-out visitor gets home rather than an error', () => {
 // -- the links ---------------------------------------------------------------
 
 test('each role sees only its own links', () => {
+  // Account is on every list: #126 gave every signed-in account a screen, and
+  // before that there was nowhere to see what is stored or change a password.
   assert.deepEqual(
     visiblePanelLinks(teacher).map((link) => link.panel),
-    [PANELS.ADD_COURSE],
+    [PANELS.ADD_COURSE, PANELS.ACCOUNT],
   );
   assert.deepEqual(
     visiblePanelLinks(student).map((link) => link.panel),
-    [PANELS.ENROLLED],
+    [PANELS.ENROLLED, PANELS.ACCOUNT],
   );
   assert.deepEqual(
     visiblePanelLinks(admin).map((link) => link.panel),
-    [PANELS.ADD_COURSE, PANELS.COURSES],
+    [PANELS.ADD_COURSE, PANELS.COURSES, PANELS.ACCOUNT],
   );
+});
+
+test('every role, and only a real role, may open the account panel', () => {
+  for (const user of [student, teacher, admin]) {
+    assert.equal(resolvePanel('account', user), PANELS.ACCOUNT);
+  }
+
+  // An unreadable role falls back to home rather than being handed a screen
+  // that would immediately fail to load.
+  assert.equal(resolvePanel('account', { type: 'ghost' }), PANELS.HOME);
+  assert.equal(resolvePanel('account', null), PANELS.HOME);
+});
+
+test('the older `profile` spelling opens the account panel', () => {
+  assert.equal(resolvePanel('profile', student), PANELS.ACCOUNT);
 });
 
 test('an account with no usable role sees no panel links', () => {

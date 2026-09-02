@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const userSchema = require("../schemas/userModel");
+const { buildAdminAccount, isAdminId } = require("../utils/adminAccount");
 
 module.exports = async (req, res, next) => {
   try {
@@ -19,8 +20,11 @@ module.exports = async (req, res, next) => {
       } else {
         req.body.userId = decode.id;
         
-        if (decode.id === "admin") {
-          req.user = { _id: "admin", id: "admin", role: "admin", type: "admin" };
+        // The admin is a credential pair in the environment, not a users row,
+        // so there is nothing to look up. The account is built from the same
+        // helper the login response uses, so the two cannot disagree (#125).
+        if (isAdminId(decode.id)) {
+          req.user = buildAdminAccount(process.env.ADMIN_USERNAME);
           return next();
         }
 

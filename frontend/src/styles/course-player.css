@@ -1,0 +1,73 @@
+/* Course player (#93).
+
+   Kept out of App.css deliberately: four branches were each appending a block
+   to the end of that file, which conflicts on every pair of them. A feature
+   stylesheet imported by the component that needs it does not.
+*/
+
+.course-player-header {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.course-player-progress {
+  max-width: 520px;
+  margin: 12px auto 24px;
+}
+
+.course-player-progress small {
+  display: block;
+  text-align: center;
+  color: #4b5563;
+}
+
+body.dark-mode .course-player-progress small {
+  color: #cbd5f5;
+}
+
+.section-complete-tick {
+  color: #2e7d32;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+.section-complete-note {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.section-no-video {
+  display: inline-block;
+  margin: 0 8px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+body.dark-mode .section-no-video {
+  color: #9ca3af;
+}
+
+.course-video-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 220px;
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed rgba(107, 114, 128, 0.5);
+  border-radius: 12px;
+  color: #6b7280;
+  text-align: center;
+}
+
+body.dark-mode .course-video-placeholder {
+  color: #9ca3af;
+  border-color: rgba(156, 163, 175, 0.4);
+}

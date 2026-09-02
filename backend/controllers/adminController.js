@@ -9,6 +9,7 @@ const enrolledCourseSchema = require("../schemas/enrolledCourseModel");
 const coursePaymentSchema = require("../schemas/coursePaymentModel");
 const { ACTIONS, recordActivity } = require("../utils/activityLog");
 const { removeUserDependents } = require("../utils/cascadeDelete");
+const { buildAdminAccount } = require("../utils/adminAccount");
 const { countSections } = require("../utils/courseSections");
 const {
   buildCourseFilter,
@@ -143,9 +144,18 @@ const adminLoginController = async (req, res) => {
       email: credentials.username,
     });
 
-    return res
-      .status(200)
-      .send({ success: true, token, message: "Admin login successful" });
+    // #125. The token used to travel alone. The browser's session layer needs
+    // an account beside it — `parseStoredUser` requires an object with an id,
+    // and `getUserRole` reads `type` — so a caller holding only a token could
+    // not produce a signed-in session at all, and the four admin screens were
+    // unreachable. This is the same shape `POST /api/user/login` returns under
+    // `userData`, built from the object `authMiddleware` recognises.
+    return res.status(200).send({
+      success: true,
+      token,
+      userData: buildAdminAccount(credentials.username),
+      message: "Admin login successful",
+    });
   } catch (error) {
     console.error("Admin login failed:", error.message);
     return res

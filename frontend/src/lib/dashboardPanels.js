@@ -35,6 +35,10 @@ export const PANELS = Object.freeze({
   ADD_COURSE: 'addcourse',
   COURSES: 'courses',
   ENROLLED: 'enrolled',
+  // #126. Everyone's, because every account has one and none of them had a
+  // screen: no way to see what is stored, no way to correct a name typed wrong
+  // at registration, and no way to change a password without signing out.
+  ACCOUNT: 'account',
 });
 
 export const PANEL_QUERY_KEY = 'panel';
@@ -51,6 +55,8 @@ const PANEL_ALIASES = Object.freeze({
   enrolled: PANELS.ENROLLED,
   enrolledcourese: PANELS.ENROLLED,
   enrolledcourses: PANELS.ENROLLED,
+  account: PANELS.ACCOUNT,
+  profile: PANELS.ACCOUNT,
 });
 
 /**
@@ -75,6 +81,14 @@ export const PANEL_LINKS = Object.freeze([
     panel: PANELS.ENROLLED,
     label: 'Enrolled Courses',
     roles: Object.freeze([ROLES.STUDENT]),
+  }),
+  // Listed for every role rather than left unrestricted, so `canSeePanel`
+  // keeps its one rule — a panel is visible to the roles it names — and an
+  // account whose role is unreadable is still offered nothing.
+  Object.freeze({
+    panel: PANELS.ACCOUNT,
+    label: 'Account',
+    roles: Object.freeze([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN]),
   }),
 ]);
 

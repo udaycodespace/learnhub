@@ -8,6 +8,7 @@ import {
   courseHref,
   describeEnrolledRange,
   describeProgress,
+  describeWithdrawal,
   formatEnrolledDate,
   progressState,
   readProgress,
@@ -134,4 +135,69 @@ test('the range counts the whole collection, not the loaded page', () => {
     'Showing 1 of 1 enrolled course',
   );
   assert.equal(describeEnrolledRange({ page: 1, limit: 12, totalItems: 0 }, 0), 'No enrolled courses');
+});
+
+// -- leaving a course (#128) --------------------------------------------------
+//
+// There was no way to leave one: an enrolment row was only ever created, and
+// the only deletes are in the cascade for a deleted course or a deleted
+// account. A free course enrols on a single click with no confirmation —
+// `handleEnroll` skips the payment modal entirely for a free course — so a
+// mis-click stayed on this table for the life of the account.
+
+test('the confirmation names the progress that will be lost', () => {
+  const lines = describeWithdrawal({
+    progress: { completed: 4, total: 10, percent: 40 },
+  });
+
+  assert.ok(lines.some((line) => /4 sections/.test(line)));
+});
+
+test('one completed section is not "1 sections"', () => {
+  const lines = describeWithdrawal({
+    progress: { completed: 1, total: 10, percent: 10 },
+  });
+
+  assert.ok(lines.some((line) => /1 section\b/.test(line)));
+  assert.equal(lines.some((line) => /1 sections/.test(line)), false);
+});
+
+test('no progress means no sentence about losing it', () => {
+  const lines = describeWithdrawal({
+    progress: { completed: 0, total: 10, percent: 0 },
+  });
+
+  assert.equal(lines.some((line) => /progress/i.test(line)), false);
+});
+
+test('the confirmation says the payment record is kept, not refunded', () => {
+  // A financial record must not disappear because somebody changed their mind,
+  // and the application does not process refunds. Both need saying, because
+  // "leave the course" reads like "get my money back".
+  const lines = describeWithdrawal({ progress: { completed: 2, total: 5 } });
+  const joined = lines.join(' ');
+
+  assert.match(joined, /kept and marked as withdrawn/i);
+  assert.match(joined, /does not request a refund/i);
+});
+
+test('the confirmation says a review will go with the enrolment', () => {
+  const lines = describeWithdrawal({ progress: { completed: 0, total: 5 } });
+
+  assert.ok(lines.some((line) => /review/i.test(line)));
+});
+
+test('the confirmation says re-enrolling is possible', () => {
+  const lines = describeWithdrawal({ progress: { completed: 0, total: 5 } });
+
+  assert.ok(lines.some((line) => /enrol again/i.test(line)));
+});
+
+test('a row with no progress block does not throw', () => {
+  // `readProgress` already copes with the three shapes the row takes; this only
+  // confirms the confirmation text does too.
+  for (const row of [{}, null, undefined, { progress: null }]) {
+    const lines = describeWithdrawal(row);
+    assert.ok(lines.length > 0);
+  }
 });

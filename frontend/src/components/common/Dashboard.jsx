@@ -7,6 +7,7 @@ import UserHome from './UserHome';
 import AddCourse from '../user/teacher/AddCourse';
 import EnrolledCourses from '../user/student/EnrolledCourses';
 import AllCourses from '../admin/AllCourses';
+import AccountPanel from './AccountPanel';
 import { UserContext } from '../../App';
 import { PANELS, readPanelFromSearch, resolvePanel } from '../../lib/dashboardPanels';
 
@@ -51,6 +52,9 @@ const Dashboard = () => {
 
          case PANELS.COURSES:
             return <AllCourses />;
+
+         case PANELS.ACCOUNT:
+            return <AccountPanel />;
 
          case PANELS.HOME:
          default:

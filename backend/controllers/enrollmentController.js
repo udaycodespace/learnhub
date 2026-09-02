@@ -4,6 +4,7 @@ const {
   formatPaymentMessage,
   isFreeCourse,
 } = require("../utils/paymentDetails");
+const { withdrawEnrolment } = require("../utils/enrolmentWithdrawal");
 
 const DUPLICATE_KEY_ERROR = 11000;
 
@@ -212,9 +213,92 @@ function createEnrollCourseController({
 const enrollCourseController = (req, res) =>
   createEnrollCourseController()(req, res);
 
+/**
+ * Builds the DELETE /api/user/enrolledcourse/:courseid handler.
+ *
+ * #128. There was no counterpart to the POST above. An enrolment row was only
+ * ever created, and the only deletes in the project are in the cascade — one
+ * for a deleted course, one for a deleted account. A free course enrols on a
+ * single click with no confirmation, because `handleEnroll` skips the payment
+ * modal entirely for a free course, so a mis-click was permanent.
+ *
+ * Scoped to the caller's own enrolment. The course id names the course; the
+ * account comes from the token, so there is no way to spell a request that
+ * withdraws somebody else.
+ */
+function createWithdrawEnrollmentController({
+  isValidObjectId,
+  withdraw = withdrawEnrolment,
+  logger = console,
+} = {}) {
+  return async function withdrawEnrollmentController(req, res) {
+    const validateObjectId =
+      isValidObjectId || require("mongoose").isValidObjectId;
+
+    const { courseid } = req.params || {};
+    const userId = getEnrollingUserId(req);
+
+    if (!userId) {
+      return res.status(401).send({
+        success: false,
+        message: "Authenticated user is required",
+      });
+    }
+
+    if (!validateObjectId(courseid)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid course ID",
+      });
+    }
+
+    try {
+      const result = await withdraw({ userId, courseId: courseid });
+
+      // Not enrolled, or already withdrawn in another tab. 404 rather than an
+      // error: there is nothing to undo and nothing went wrong.
+      if (!result.withdrawn) {
+        return res.status(404).send({
+          success: false,
+          message: "You are not enrolled in this course",
+        });
+      }
+
+      return res.status(200).send({
+        success: true,
+        message: "You have left the course",
+        removed: {
+          progress: Array.isArray(result.enrolment?.progress)
+            ? result.enrolment.progress.length
+            : 0,
+          reviews: result.reviews,
+        },
+        // Marked, not deleted: a financial record must not disappear because
+        // somebody changed their mind.
+        payments: { markedWithdrawn: result.payments },
+      });
+    } catch (error) {
+      logger.error("Error withdrawing from course", {
+        courseId: courseid,
+        message: error instanceof Error ? error.message : String(error),
+      });
+
+      return res.status(500).send({
+        success: false,
+        message: "Failed to leave the course",
+      });
+    }
+  };
+}
+
+const withdrawEnrollmentController = (req, res) =>
+  createWithdrawEnrollmentController()(req, res);
+
 module.exports = {
   createEnrollCourseController,
+  createWithdrawEnrollmentController,
   enrollCourseController,
   getEnrollingUserId,
   isDuplicateKeyError,
+  withdrawEnrollmentController,
 };

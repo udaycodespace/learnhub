@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 const courseSchema = require("../schemas/courseModel");
 const enrolledCourseSchema = require("../schemas/enrolledCourseModel");
+const {
+  buildProgressSummary,
+  completedSectionIds,
+} = require("../utils/courseProgress");
 
 function normalizeSectionId(sections, sectionId) {
   const normalizedSections = Array.isArray(sections) ? sections : [];
@@ -35,6 +39,37 @@ function normalizeSectionId(sections, sectionId) {
   }
 
   return null;
+}
+
+/**
+ * The progress array as it stands after this request, given the array that was
+ * read and the id `$addToSet` has just written (or null when it wrote nothing).
+ *
+ * @param {unknown} progress
+ * @param {string|number|null} addedSectionId
+ * @returns {Array<{sectionId: string|number}>}
+ */
+function projectProgress(progress, addedSectionId) {
+  const entries = Array.isArray(progress) ? [...progress] : [];
+
+  if (addedSectionId === null || addedSectionId === undefined) {
+    return entries;
+  }
+
+  const existing = completedSectionIds(entries);
+
+  if (!existing.has(String(addedSectionId))) {
+    entries.push({ sectionId: addedSectionId });
+  }
+
+  return entries;
+}
+
+// Injectable clock, so a test can assert the stamped date without racing it.
+let now = () => new Date();
+
+function setClock(clock) {
+  now = typeof clock === "function" ? clock : () => new Date();
 }
 
 function getAuthenticatedUserId(req) {
@@ -116,18 +151,58 @@ function createCompleteSectionController({
         },
       );
 
-      if (updateResult.modifiedCount === 0) {
-        return res.status(200).send({
-          success: true,
-          alreadyCompleted: true,
-          message: "Section was already completed",
-        });
+      const alreadyCompleted = updateResult.modifiedCount === 0;
+
+      // The stored progress plus the id this call just added, without a second
+      // read. `$addToSet` is a no-op when the id was already there, and so is
+      // adding it to the set here.
+      const progressAfter = projectProgress(
+        enrollment.progress,
+        alreadyCompleted ? null : normalizedSectionId,
+      );
+
+      const progress = buildProgressSummary({
+        course_Length: enrollment.course_Length,
+        progress: progressAfter,
+      });
+
+      // The certificate is dated the moment the last section is completed, and
+      // only then. The player used to read `enrollment.updatedAt` — Mongoose's
+      // last-write timestamp, which moves every time progress is added and
+      // again when enrollmentController corrects course_Length after a course
+      // is edited. `certificateDate` has been declared on the schema since the
+      // model was written and nothing ever wrote it (#93).
+      let certificateDate = enrollment.certificateDate || null;
+      const isComplete = progress.total > 0 && progress.completed >= progress.total;
+
+      if (isComplete && !certificateDate) {
+        certificateDate = now();
+
+        // Guarded on the field still being unset, so two requests completing
+        // the last section at once cannot overwrite each other's date.
+        await EnrolledCourseModel.updateOne(
+          {
+            _id: enrollment._id,
+            $or: [
+              { certificateDate: { $exists: false } },
+              { certificateDate: null },
+            ],
+          },
+          { $set: { certificateDate } },
+        );
       }
 
       return res.status(200).send({
         success: true,
-        alreadyCompleted: false,
-        message: "Section completed successfully",
+        alreadyCompleted,
+        message: alreadyCompleted
+          ? "Section was already completed"
+          : "Section completed successfully",
+        // Returned so the player can advance without re-fetching the course,
+        // and so it stops deciding completion for itself.
+        progress,
+        isComplete,
+        certificateDate,
       });
     } catch (error) {
       console.error("Error completing section:", error);
@@ -146,4 +221,6 @@ module.exports = {
   createCompleteSectionController,
   getAuthenticatedUserId,
   normalizeSectionId,
+  projectProgress,
+  setClock,
 };

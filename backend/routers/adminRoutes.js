@@ -21,6 +21,11 @@ const {
 } = require("../controllers/courseDeletionController");
 
 const {
+  getCourseForEditController,
+  updateCourseController,
+} = require("../controllers/courseUpdateController");
+
+const {
   getAdminPaymentsController,
 } = require("../controllers/paymentRecordsController");
 
@@ -47,6 +52,22 @@ router.get("/payments", requireAdmin, getAdminPaymentsController);
 router.get("/activity-logs", requireAdmin, getActivityLogsController);
 
 router.get("/getallcourses", requireAdmin, getAllCoursesController);
+
+// The same controller the educator route uses — it already accepts an admin
+// for any course, the way deleteCourseController does (#127).
+router.get(
+  "/editcourse/:courseid",
+  requireAdmin,
+  validateObjectId("courseid", "course ID"),
+  getCourseForEditController,
+);
+
+router.put(
+  "/editcourse/:courseid",
+  requireAdmin,
+  validateObjectId("courseid", "course ID"),
+  updateCourseController,
+);
 
 router.delete(
   "/deletecourse/:courseid",

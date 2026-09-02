@@ -2,6 +2,13 @@ const {
   buildPaginationMetadata,
   normalizePagination,
 } = require("../utils/pagination");
+// Moved to utils/courseProgress so the course player reads the same rule (#93).
+// Re-exported below, unchanged, for the tests and callers that import them
+// from this module.
+const {
+  buildProgressSummary,
+  countCompletedSections,
+} = require("../utils/courseProgress");
 
 /**
  * GET /api/user/getallcoursesuser — the student "My courses" list.
@@ -25,41 +32,6 @@ function getRequestingUserId(req) {
   // controllers; keep reading it so behaviour does not change for any caller
   // that still relies on it.
   return req.body?.userId ? String(req.body.userId) : null;
-}
-
-/**
- * Counts distinct completed sections. `progress` is an append-only array and
- * older rows were written without a uniqueness guard, so the same sectionId can
- * appear more than once and a naive `.length` overstates completion.
- */
-function countCompletedSections(progress) {
-  if (!Array.isArray(progress)) return 0;
-
-  const completed = new Set();
-
-  for (const entry of progress) {
-    if (!entry || entry.sectionId === undefined || entry.sectionId === null) {
-      continue;
-    }
-
-    completed.add(String(entry.sectionId));
-  }
-
-  return completed.size;
-}
-
-/**
- * Turns an enrolment row into the progress summary the UI needs.
- * `completed` is capped at `total` so a stale duplicate cannot report 120%.
- */
-function buildProgressSummary(enrollment) {
-  const total = Number.isFinite(enrollment.course_Length)
-    ? Math.max(0, enrollment.course_Length)
-    : 0;
-  const completed = Math.min(countCompletedSections(enrollment.progress), total);
-  const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-  return { completed, total, percent };
 }
 
 function createGetEnrolledCoursesController({

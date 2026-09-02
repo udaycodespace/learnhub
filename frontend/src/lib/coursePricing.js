@@ -159,3 +159,93 @@ export function readEnrollmentFieldErrors(error) {
 
   return fields;
 }
+
+// ---------------------------------------------------------------------------
+// What a paid price is allowed to be (#135).
+//
+// The mirror of `parseCoursePrice` in backend/utils/coursePricing.js, for the
+// same reason the free rule is mirrored: Add Course has to refuse a bad price
+// before it spends several minutes uploading video, and the server has to
+// refuse it regardless of what the browser did. The server check is the
+// authoritative one and is unchanged by anything here.
+//
+// Before this, `normalizeCoursePrice` stored any non-free string verbatim, so
+// a course could be published priced "abc" or "-500" and would then be
+// advertised on its catalogue card, classified paid, put through the payment
+// modal, and recorded as the `amount` on the payments row the admin dashboard
+// totals.
+
+export const MAX_COURSE_PRICE = 1000000;
+export const MAX_PRICE_LENGTH = 40;
+
+// Digits, optionally a decimal point and one or two places. No sign and no
+// exponent. Kept character-for-character in step with PRICE_PATTERN in
+// backend/utils/coursePricing.js.
+export const PRICE_PATTERN = /^\d+(?:\.\d{1,2})?$/;
+
+const PRICE_NOISE_PATTERN = /[\s,₹$€£]|(?:^rs\.?)/gi;
+
+const priceFailure = (reason) => ({
+  valid: false,
+  free: false,
+  amount: null,
+  normalized: null,
+  reason,
+});
+
+const freePrice = () => ({
+  valid: true,
+  free: true,
+  amount: 0,
+  normalized: FREE_PRICE_LABEL,
+  reason: null,
+});
+
+/**
+ * Whether a submitted price is one the platform can charge.
+ *
+ * @param {unknown} value
+ * @param {object} [options]
+ * @param {number} [options.max]
+ * @returns {{valid: boolean, free: boolean, amount: number|null,
+ *            normalized: string|null, reason: string|null}}
+ */
+export function parseCoursePrice(value, { max = MAX_COURSE_PRICE } = {}) {
+  if (isFreePrice(value)) return freePrice();
+
+  const raw = String(value).trim();
+
+  if (raw.length > MAX_PRICE_LENGTH) {
+    return priceFailure(`Price must be at most ${MAX_PRICE_LENGTH} characters`);
+  }
+
+  const cleaned = raw.replace(PRICE_NOISE_PATTERN, '');
+
+  if (!PRICE_PATTERN.test(cleaned)) {
+    return priceFailure(
+      'Price must be a number, for example 499 or 499.00. Enter 0 for a free course',
+    );
+  }
+
+  const amount = Number(cleaned);
+
+  if (!Number.isFinite(amount)) {
+    return priceFailure('Price is not a number this platform can charge');
+  }
+
+  if (amount > max) {
+    return priceFailure(`Price must be at most ${max}`);
+  }
+
+  // isFreePrice has already claimed everything reading as zero; a form like
+  // "0.000" that its one-or-more-zeros branch missed lands here and is free.
+  if (amount === 0) return freePrice();
+
+  return {
+    valid: true,
+    free: false,
+    amount,
+    normalized: cleaned,
+    reason: null,
+  };
+}

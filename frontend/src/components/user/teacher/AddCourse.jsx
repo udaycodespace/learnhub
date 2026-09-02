@@ -2,6 +2,7 @@ import React, { useMemo, useState, useContext } from 'react';
 import { Button, Form, Col, Row } from 'react-bootstrap';
 import { UserContext } from '../../../App';
 import axiosInstance from '../../common/AxiosInstance';
+import Toast from '../../common/Toast';
 import {
    VIDEO_ACCEPT_ATTRIBUTE,
    buildCourseFormData,
@@ -11,6 +12,10 @@ import {
    uploadLimits,
    validateCourseUpload,
 } from '../../../lib/courseUpload';
+import {
+   CATEGORY_PLACEHOLDER,
+   COURSE_CATEGORIES,
+} from '../../../lib/courseCategories';
 
 // #106. The form and the API disagreed about what a section video is. The
 // picker said `accept="video/*,image/*"` and the label said "Video or Image";
@@ -31,6 +36,8 @@ import {
 // is refused against the section it belongs to at the moment it is chosen. The
 // server check is untouched and stays authoritative.
 
+const EMPTY_TOAST = { message: '', type: 'info' };
+
 const emptyCourse = () => ({
    C_title: '',
    C_categories: '',
@@ -50,6 +57,10 @@ const AddCourse = () => {
    const [submitting, setSubmitting] = useState(false);
    const [formError, setFormError] = useState('');
    const [sectionErrors, setSectionErrors] = useState({});
+   // Price and category, marked on the fields themselves rather than only
+   // summarised in the form-level message (#135).
+   const [detailErrors, setDetailErrors] = useState({});
+   const [toast, setToast] = useState(EMPTY_TOAST);
 
    // The server takes the owner and the educator name from the bearer token, so
    // neither is posted any more. It used to read `userId` straight out of this
@@ -85,13 +96,26 @@ const AddCourse = () => {
       }));
    };
 
+   const clearDetailError = (field) => {
+      setDetailErrors((current) => {
+         if (!current[field]) return current;
+
+         const next = { ...current };
+         delete next[field];
+
+         return next;
+      });
+   };
+
    const handleChange = (e) => {
       const { name, value } = e.target;
       setAddCourse({ ...addCourse, [name]: value });
+      clearDetailError(name);
    };
 
    const handleCourseTypeChange = (e) => {
       setAddCourse({ ...addCourse, C_categories: e.target.value });
+      clearDetailError('C_categories');
    };
 
    const addInputGroup = () => {
@@ -168,12 +192,14 @@ const AddCourse = () => {
 
       if (!validation.valid) {
          setSectionErrors(validation.sectionErrors);
+         setDetailErrors(validation.detailErrors || {});
          setFormError(validation.formError);
          return;
       }
 
       setFormError('');
       setSectionErrors({});
+      setDetailErrors({});
       setSubmitting(true);
 
       try {
@@ -184,7 +210,14 @@ const AddCourse = () => {
          );
 
          if (res.data.success) {
-            alert(res.data.message);
+            // The alert fired after an upload that may have taken minutes,
+            // blocked the tab, and was then followed by the form being reset —
+            // so dismissing it left an empty form and no evidence the course
+            // had been created (#137).
+            setToast({
+               message: res.data.message || 'Course created.',
+               type: 'success',
+            });
             setAddCourse(emptyCourse());
          } else {
             setFormError(res.data.message || 'Failed to create course.');
@@ -192,6 +225,20 @@ const AddCourse = () => {
       } catch (error) {
          // The API answers 400 with a readable reason, so show it rather than
          // guessing that the upload must have been the wrong file type.
+         // The API answers with per-field errors as well as a message, so the
+         // price and category it rejected are marked rather than only
+         // described.
+         const fieldErrors = error.response?.data?.errors;
+
+         if (fieldErrors && typeof fieldErrors === 'object') {
+            setDetailErrors({
+               ...(fieldErrors.C_price ? { C_price: fieldErrors.C_price } : {}),
+               ...(fieldErrors.C_categories
+                  ? { C_categories: fieldErrors.C_categories }
+                  : {}),
+            });
+         }
+
          setFormError(
             error.response?.data?.message ||
                'The course could not be created. Please try again.',
@@ -207,12 +254,26 @@ const AddCourse = () => {
             <Row className="mb-3">
                <Form.Group as={Col} controlId="formGridJobType">
                   <Form.Label>Course Type</Form.Label>
-                  <Form.Select value={addCourse.C_categories} onChange={handleCourseTypeChange}>
-                     <option>Select categories</option>
-                     <option>IT &amp; Software</option>
-                     <option>Finance &amp; Accounting</option>
-                     <option>Personal Development</option>
+                  {/* The placeholder carries an empty value now. It had
+                      none, so its value was its label and an untouched form
+                      published a course filed under "Select categories". */}
+                  <Form.Select
+                     value={addCourse.C_categories}
+                     onChange={handleCourseTypeChange}
+                     required
+                     isInvalid={Boolean(detailErrors.C_categories)}
+                     aria-describedby="categoryError"
+                  >
+                     <option value="">{CATEGORY_PLACEHOLDER}</option>
+                     {COURSE_CATEGORIES.map((category) => (
+                        <option key={category} value={category}>
+                           {category}
+                        </option>
+                     ))}
                   </Form.Select>
+                  <Form.Control.Feedback type="invalid" id="categoryError">
+                     {detailErrors.C_categories}
+                  </Form.Control.Feedback>
                </Form.Group>
                <Form.Group as={Col} controlId="formGridTitle">
                   <Form.Label>Course Title</Form.Label>
@@ -239,7 +300,20 @@ const AddCourse = () => {
                </Form.Group>
                <Form.Group as={Col} controlId="formGridPrice">
                   <Form.Label>Course Price(Rs.)</Form.Label>
-                  <Form.Control name='C_price' value={addCourse.C_price} onChange={handleChange} type="text" placeholder="for free course, enter 0" required />
+                  <Form.Control
+                     name='C_price'
+                     value={addCourse.C_price}
+                     onChange={handleChange}
+                     type="text"
+                     inputMode="decimal"
+                     placeholder="for free course, enter 0"
+                     required
+                     isInvalid={Boolean(detailErrors.C_price)}
+                     aria-describedby="priceError"
+                  />
+                  <Form.Control.Feedback type="invalid" id="priceError">
+                     {detailErrors.C_price}
+                  </Form.Control.Feedback>
                </Form.Group>
                <Form.Group as={Col} className="mb-3" controlId="formGridDescription">
                   <Form.Label>Course Description</Form.Label>
@@ -359,6 +433,12 @@ const AddCourse = () => {
                {submitting ? 'Creating…' : 'Submit'}
             </Button>
          </Form>
+
+         <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(EMPTY_TOAST)}
+         />
       </div>
    );
 };
