@@ -66,6 +66,8 @@ app.use("/api/user", require("./routers/userRoutes"));
 app.use("/api/bookmarks", require("./routers/courseBookmarkRoutes"));
 app.use("/api/bookmark-folders", require("./routers/bookmarkFolderRoutes"));
 app.use("/api/reviews", require("./routers/courseReviewRoutes"));
+app.use("/api/recently-viewed", require("./routers/recentlyViewedRoutes"));
+app.use("/api/suggested-courses", require("./routers/suggestedCoursesRoutes"));
 app.use("/api/teacher/analytics", require("./routers/teacherAnalyticsRoutes"));
 app.use("/api/goals", require("./routers/learningGoalRoutes"));
 app.use("/api/forum", require("./routers/courseForumRoutes"));
