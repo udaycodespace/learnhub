@@ -2,74 +2,68 @@
 
 Thanks for your interest in LearnHub.
 
-This document explains the best way to get help, ask questions, report bugs, and raise security concerns.
+This guide explains where to ask questions, report bugs, request features, and report security issues.
 
-## Where to Get Help
+## Get help
 
-### 1. General Questions and Contributor Help
+For setup, contribution questions, or general help, join the [LearnHub Discord](https://discord.gg/22tFSJRG2).
 
-If you have a general question about the project, setup, contribution flow, or want help getting started, please join the community Discord:
+You can ask about:
 
-- Discord: [https://discord.gg/22tFSJRG2](https://discord.gg/22tFSJRG2)
+* Local setup
+* Contribution process
+* Issue requirements
+* Development problems
 
-Use Discord for:
+## Report a bug
 
-- Local setup help
-- Contribution guidance
-- Clarifying issue requirements
-- Asking where to start
-- Getting unstuck during development
+Open an issue in the [LearnHub repository](https://github.com/udaycodespace/learnhub/issues).
 
-### 2. Bug Reports
+Please include:
 
-If you find a bug in the project, please open a GitHub issue with clear reproduction steps.
+* What happened
+* What you expected
+* Steps to reproduce
+* Screenshots or logs, if useful
+* Relevant environment details
 
-A good bug report should include:
+## Request a feature
 
-- What happened
-- What you expected to happen
-- Steps to reproduce the problem
-- Screenshots or logs, if available
-- Environment details such as OS, browser, and Node.js version if relevant
+Open an issue in the [LearnHub repository](https://github.com/udaycodespace/learnhub/issues) and explain:
 
-## 3. Feature Requests
+* The problem
+* Your proposed solution
+* Examples or references, if useful
 
-If you want to suggest a new feature or improvement, please open a GitHub issue and describe:
+Check existing issues first to avoid duplicates.
 
-- The problem you are trying to solve
-- The proposed solution
-- Any helpful examples or references
+## Contributing help
 
-Please check existing issues first to avoid duplicates.
+Before contributing, read:
 
-## 4. Contribution Questions
+* [CONTRIBUTING.md](CONTRIBUTING.md)
+* [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+* [SECURITY.md](SECURITY.md)
 
-Before starting work on an issue:
+If LearnHub is part of an open source program, follow both the LearnHub rules and that program's rules.
 
-- Read `CONTRIBUTING.md`
-- Read `CODE_OF_CONDUCT.md`
-- Comment on the issue before starting work
-- Wait for assignment if the repository workflow requires it
+## Security issues
 
-If you are participating through ECSoC or another open-source program, make sure you follow the repository contribution rules and deadlines.
+Do not report security vulnerabilities through public issues, discussions, or pull requests.
 
-## 5. Security Issues
+Follow the reporting process in [SECURITY.md](SECURITY.md).
 
-If you discover a security vulnerability, please **do not open a public issue, discussion, or pull request**.
+## Response expectations
 
-Instead, report it privately through the contact listed in `SECURITY.md`.
+Response times depend on maintainer availability and issue complexity.
 
-## Response Expectations
+Please provide enough detail to help others understand and reproduce the problem.
 
-Response time can vary depending on maintainer availability, project workload, and issue complexity.
+## Useful links
 
-Please be respectful, patient, and clear when asking for help.
-
-## Good First Step
-
-If you are new to LearnHub, start by reading:
-
-- `README.md`
-- `CONTRIBUTING.md`
-- `CODE_OF_CONDUCT.md`
-- `SECURITY.md`
+* [LearnHub repository](https://github.com/udaycodespace/learnhub)
+* [Issues](https://github.com/udaycodespace/learnhub/issues)
+* [Discussions](https://github.com/udaycodespace/learnhub/discussions)
+* [CONTRIBUTING.md](CONTRIBUTING.md)
+* [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+* [SECURITY.md](SECURITY.md)

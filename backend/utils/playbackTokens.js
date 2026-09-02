@@ -42,6 +42,39 @@ function signPlaybackToken({ userId, courseId }, secret = process.env.JWT_SECRET
 }
 
 /**
+ * Mints a token and says when it stops working.
+ *
+ * The client used to receive the token alone, so the only way it could learn
+ * the expiry was to decode a credential it has no business parsing — and it
+ * did not, which is why playback died silently half an hour into a course
+ * (#124). Stating the deadline is what lets the page renew the token before it
+ * lapses instead of after.
+ *
+ * `expiresAt` is epoch milliseconds so `new Date(expiresAt)` works in the
+ * browser without a conversion step.
+ *
+ * @param {object} claims
+ * @param {string} claims.userId
+ * @param {string} claims.courseId
+ * @param {object} [options]
+ * @param {number} [options.now] injectable clock, in ms, for tests
+ * @param {string} [options.secret]
+ * @returns {{ token: string, expiresAt: number, expiresInSeconds: number }}
+ */
+function issuePlaybackToken(
+  { userId, courseId },
+  { now = Date.now(), secret = process.env.JWT_SECRET } = {},
+) {
+  const token = signPlaybackToken({ userId, courseId }, secret);
+
+  return {
+    token,
+    expiresAt: now + PLAYBACK_TTL_SECONDS * 1000,
+    expiresInSeconds: PLAYBACK_TTL_SECONDS,
+  };
+}
+
+/**
  * Reads a playback token.
  *
  * The scope check is the important line. Without it any session JWT signed with
@@ -88,6 +121,7 @@ function tokenCoversCourse(claims, courseId) {
 module.exports = {
   PLAYBACK_SCOPE,
   PLAYBACK_TTL_SECONDS,
+  issuePlaybackToken,
   signPlaybackToken,
   tokenCoversCourse,
   verifyPlaybackToken,

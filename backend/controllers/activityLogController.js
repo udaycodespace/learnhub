@@ -1,6 +1,16 @@
 const ActivityLog = require("../schemas/activityLogModel");
 
-const ALLOWED_ACTIONS = new Set(["login", "logout", "login_failed"]);
+// Kept in step with the schema's enum by activity-log-actions.test.js — the
+// filter refuses anything not listed here, so an action the log can store but
+// this set does not name would be unfilterable.
+const ALLOWED_ACTIONS = new Set([
+  "login",
+  "logout",
+  "login_failed",
+  "password_changed",
+  "password_change_failed",
+  "profile_updated",
+]);
 const ALLOWED_ROLES = new Set(["admin", "student", "teacher"]);
 const ALLOWED_SORTS = new Set(["newest", "oldest"]);
 
@@ -177,5 +187,6 @@ const getActivityLogsController = async (req, res) => {
 };
 
 module.exports = {
+  ALLOWED_ACTIONS,
   getActivityLogsController,
 };

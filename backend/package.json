@@ -9,6 +9,7 @@
     "check:syntax": "node --test tests/module-load.test.js",
     "check": "npm run check:syntax && npm test",
     "db:dedupe-emails": "node scripts/dedupeUserEmails.js",
+    "db:remove-self-reviews": "node scripts/removeSelfReviews.js",
     "start": "nodemon index"
   },
   "dependencies": {

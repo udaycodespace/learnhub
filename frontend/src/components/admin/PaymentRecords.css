@@ -305,6 +305,14 @@
   background: rgba(190,48,48,.11);
 }
 
+/* #128. A withdrawal is not a failure — the money moved, and whether it comes
+   back is a question this application does not answer — so it reads as neutral
+   rather than red. */
+.payment-status-withdrawn {
+  color: #4b5563;
+  background: rgba(75, 85, 99, .12);
+}
+
 .payment-details-button {
   min-height: 34px;
   padding: 0 12px;
@@ -600,6 +608,11 @@ body.dark-mode .payment-status-pending {
 body.dark-mode .payment-status-failed {
   color: #ff8a80;
   background: rgba(255, 107, 107, 0.15);
+}
+
+body.dark-mode .payment-status-withdrawn {
+  color: #b6bcc7;
+  background: rgba(182, 188, 199, 0.14);
 }
 
 body.dark-mode .payment-details-button,

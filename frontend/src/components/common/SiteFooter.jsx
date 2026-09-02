@@ -42,6 +42,11 @@ const SiteFooter = () => {
           <h2>Legal</h2>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms & Conditions</Link>
+          {/* The only entry point to the admin dashboard. Down here rather
+              than in the main navigation because it is for the operator
+              account configured on the server, not for learners — but it has
+              to exist somewhere, and until now it existed nowhere (#125). */}
+          <Link to="/admin/login">Administrator sign in</Link>
           <span className="coming-soon">Legal content coming soon</span>
         </div>
       </div>

@@ -1,6 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axiosInstance, { getToken } from "../common/AxiosInstance";
 import RatingStars from "./RatingStars";
+import ConfirmDialog from "../common/ConfirmDialog";
+import { createConfirmRequest } from "../../lib/confirmDialog";
+import {
+  canShowReviewForm,
+  readEligibility,
+  reviewDenialMessage,
+} from "../../lib/reviewEligibility";
 import "./CourseReviews.css";
 
 const initialPagination = {
@@ -31,6 +38,9 @@ const CourseReviews = ({ courseId, courseTitle }) => {
   const [page, setPage] = useState(1);
   const [myReview, setMyReview] = useState(null);
   const [canReview, setCanReview] = useState(false);
+  // Why the form is not being offered. "Enroll in this course" was the answer
+  // to everything, including for the educator who wrote it (#117).
+  const [denialReason, setDenialReason] = useState(null);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [editing, setEditing] = useState(false);
@@ -38,6 +48,7 @@ const CourseReviews = ({ courseId, courseTitle }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [confirmRequest, setConfirmRequest] = useState(null);
 
   const loadReviews = useCallback(async () => {
     if (!courseId) return;
@@ -71,15 +82,21 @@ const CourseReviews = ({ courseId, courseTitle }) => {
         `/api/reviews/${courseId}/mine`,
       );
 
+      const eligibility = readEligibility(response.data);
+
       setMyReview(response.data.data);
-      setCanReview(Boolean(response.data.canReview));
+      setCanReview(eligibility.canReview);
+      setDenialReason(eligibility.reason);
 
       if (response.data.data) {
         setRating(response.data.data.rating);
         setReviewText(response.data.data.reviewText || "");
       }
     } catch {
+      // No reason to go on: hide the form rather than offer one that will be
+      // refused, and fall back to the enrolment prompt.
       setCanReview(false);
+      setDenialReason(null);
     }
   }, [courseId, token]);
 
@@ -139,10 +156,25 @@ const CourseReviews = ({ courseId, courseTitle }) => {
     }
   };
 
+  // window.confirm blocked the tab, was not announced, could not be themed,
+  // and gave a permanent deletion the same OK/Cancel as everything else (#137).
+  const askToRemoveReview = () => {
+    if (!myReview) return;
+
+    setConfirmRequest(
+      createConfirmRequest({
+        title: "Delete your review?",
+        consequence: `Your rating and any text you wrote about “${courseTitle || "this course"}” will be removed, and the course average will be recalculated without it. This cannot be undone.`,
+        confirmLabel: "Delete review",
+        onConfirm: removeReview,
+      }),
+    );
+  };
+
   const removeReview = async () => {
     if (!myReview) return;
-    if (!window.confirm("Delete your review permanently?")) return;
 
+    setConfirmRequest(null);
     setSaving(true);
     setError("");
     setNotice("");
@@ -222,7 +254,7 @@ const CourseReviews = ({ courseId, courseTitle }) => {
         </div>
       ) : null}
 
-      {token && canReview ? (
+      {canShowReviewForm({ isAuthenticated: Boolean(token), canReview }) ? (
         <article className="review-form-card">
           <div className="review-form-heading">
             <div>
@@ -235,7 +267,11 @@ const CourseReviews = ({ courseId, courseTitle }) => {
                 <button type="button" onClick={() => setEditing(true)}>
                   Edit
                 </button>
-                <button type="button" onClick={removeReview} disabled={saving}>
+                <button
+                  type="button"
+                  onClick={askToRemoveReview}
+                  disabled={saving}
+                >
                   Delete
                 </button>
               </div>
@@ -284,13 +320,12 @@ const CourseReviews = ({ courseId, courseTitle }) => {
             </div>
           )}
         </article>
-      ) : token ? (
-        <div className="review-eligibility-message">
-          Enroll in this course before submitting a verified review.
-        </div>
       ) : (
         <div className="review-eligibility-message">
-          Sign in with an enrolled student account to leave a review.
+          {reviewDenialMessage({
+            isAuthenticated: Boolean(token),
+            reason: denialReason,
+          })}
         </div>
       )}
 
@@ -332,9 +367,14 @@ const CourseReviews = ({ courseId, courseTitle }) => {
                 </div>
                 <div>
                   <strong>{review.user.name}</strong>
-                  <span className="verified-review-badge">
-                    ✓ Verified enrollment
-                  </span>
+                  {/* Read, not assumed. `verifiedEnrollment` was the literal
+                      `true` on every row and this badge never looked at it, so
+                      a course author's own review carried it too (#117). */}
+                  {review.verifiedEnrollment ? (
+                    <span className="verified-review-badge">
+                      ✓ Verified enrollment
+                    </span>
+                  ) : null}
                 </div>
                 <time dateTime={review.createdAt}>
                   {formatDate(review.createdAt)}
@@ -368,6 +408,12 @@ const CourseReviews = ({ courseId, courseTitle }) => {
           </button>
         </nav>
       ) : null}
+
+      <ConfirmDialog
+        request={confirmRequest}
+        onCancel={() => setConfirmRequest(null)}
+        busy={saving}
+      />
     </section>
   );
 };

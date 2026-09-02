@@ -35,14 +35,22 @@ const {
   getAllCoursesController,
 } = require("./courseListingController");
 const {
+  getCourseContentController,
+} = require("./courseContentController");
+const {
   issueVerificationOtp,
 } = require("./emailVerificationController");
 const {
   canResend,
   isOtpExpired,
 } = require("../utils/otpCodes");
-const { withPlaybackUrls } = require("../utils/publicCourse");
-const { signPlaybackToken } = require("../utils/playbackTokens");
+
+// The route wiring imports this from courseContentController directly. The
+// aggregator keeps re-exporting it under its original name so nothing that
+// still reads it from here has to change. The playback token and the stream
+// URLs main added moved into that controller along with the handler, so the
+// two imports that used to sit here now live there.
+const sendCourseContentController = getCourseContentController;
 //////////for registering/////////////////////////////
 const registerController = async (req, res) => {
   try {
@@ -273,53 +281,11 @@ const logoutController = async (req, res) => {
 // enrolled counter can be unit tested with injected models.
 
 /////sending the course content for learning to student
-const sendCourseContentController = async (req, res) => {
-  const { courseid } = req.params;
-
-  try {
-    const course = await courseSchema.findById({ _id: courseid });
-    if (!course)
-      return res.status(404).send({
-        success: false,
-        message: "No such course found",
-      });
-
-    const user = await enrolledCourseSchema.findOne({
-      userId: req.body.userId,
-      courseId: courseid, // Add the condition to match the courseId
-    });
-
-    if (!user) {
-      return res.status(404).send({
-        success: false,
-        message: "User not found",
-      });
-    } else {
-      // The enrolment check above is the only place that knows this viewer may
-      // watch this course, so the playback token is minted here. Sections go
-      // out with a stream URL instead of the file's storage path: /uploads is
-      // no longer served, and a path is not something the client needs.
-      const playbackToken = signPlaybackToken({
-        userId: req.body.userId,
-        courseId: courseid,
-      });
-
-      return res.status(200).send({
-        success: true,
-        courseContent: withPlaybackUrls(course.sections, courseid),
-        playbackToken,
-        completeModule: user.progress,
-        certficateData: user,
-      });
-    }
-  } catch (error) {
-    console.error("An error occurred:", error);
-    return res.status(500).send({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
+// Implemented in courseContentController so the enrolment is resolved from the
+// authenticated identity, a caller who is not enrolled gets a 403 rather than
+// "User not found", and the progress summary comes from the same helpers My
+// Courses uses instead of being recomputed in the browser (#93). The playback
+// token minted after the enrolment check (#76) moved there with it.
 
 //////////////completing module////////
 // Implemented in progressController so the section is validated against the

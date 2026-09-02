@@ -15,6 +15,8 @@ import {
 import axiosInstance from '../common/AxiosInstance';
 import CatalogPager from '../common/CatalogPager';
 import Toast from '../common/Toast';
+import ConfirmDialog from '../common/ConfirmDialog';
+import { createConfirmRequest } from '../../lib/confirmDialog';
 import useAdminList from '../../hooks/useAdminList';
 import '../../styles/admin-lists.css';
 import {
@@ -261,31 +263,19 @@ const AllCourses = () => {
         </>
       )}
 
-      {pendingDelete ? (
-        <div
-          className="teacher-confirm"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="admin-course-confirm-title"
-        >
-          <div className="teacher-confirm-panel">
-            <h3 id="admin-course-confirm-title">Delete this course?</h3>
-            <p>
-              “{pendingDelete.title}” and its section videos will be removed,
-              along with every enrolment, payment, review and bookmark that
-              referenced it. This cannot be undone.
-            </p>
-            <div className="teacher-confirm-actions">
-              <Button variant="outlined" onClick={() => setPendingDelete(null)} autoFocus>
-                Cancel
-              </Button>
-              <Button variant="contained" color="error" onClick={confirmDelete}>
-                Delete course
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmDialog
+        request={
+          pendingDelete
+            ? createConfirmRequest({
+                title: "Delete this course?",
+                consequence: `“${pendingDelete.title}” and its section videos will be removed, along with every enrolment, payment, review and bookmark that referenced it. This cannot be undone.`,
+                confirmLabel: "Delete course",
+                onConfirm: confirmDelete,
+              })
+            : null
+        }
+        onCancel={() => setPendingDelete(null)}
+      />
 
       <Toast message={toast.message} type={toast.type} onClose={dismissToast} />
     </section>

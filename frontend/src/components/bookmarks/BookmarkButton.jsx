@@ -19,16 +19,34 @@ const BookmarkButton = ({
   onChange,
 }) => {
   const navigate = useNavigate();
-  const { isBookmarked, toggleBookmark, trackCourses, isAuthenticated } =
-    useBookmarks();
+  const {
+    isBookmarked,
+    toggleBookmark,
+    trackCourses,
+    isAuthenticated,
+    enabled,
+  } = useBookmarks();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const bookmarked = isBookmarked(courseId);
 
+  // Registering the id is what fills the star in (#103). `trackCourses` is a
+  // no-op for a session without a wishlist, so the effect stays unconditional
+  // and the early return below stays after every hook.
   useEffect(() => {
     trackCourses(courseId);
   }, [courseId, trackCourses]);
+
+  // A signed-in account without a wishlist is not offered the control. The
+  // catalogue is reachable by an admin through the dashboard's Courses panel,
+  // and the star used to render there and answer 403 when clicked (#115).
+  //
+  // A signed-out visitor still sees it: the feature is theirs, and the button
+  // sends them to the login screen.
+  if (isAuthenticated && !enabled) {
+    return null;
+  }
 
   const handleClick = async (event) => {
     event.preventDefault();

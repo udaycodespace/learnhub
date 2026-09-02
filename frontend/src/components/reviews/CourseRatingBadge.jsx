@@ -4,6 +4,7 @@ import PropTypes from "prop-types";
 import axiosInstance from "../common/AxiosInstance";
 import RatingStars from "./RatingStars";
 import { EMPTY_SUMMARY, normalizeSummary } from "../../lib/ratingSummaries";
+import { describeReviewsLink } from "../../lib/reviewAccess";
 import "./CourseReviews.css";
 
 // This badge used to fetch its own summary unconditionally, so a list of twelve
@@ -13,8 +14,19 @@ import "./CourseReviews.css";
 //
 // The self-fetching path is kept for the single-course case, where there is no
 // page to batch with.
+//
+// With `onOpen` the badge is the way into a course's reviews (#136). It used to
+// be an inert div: every catalogue card advertised "4.6 (23)" and there was no
+// route from it to any of the 23, because the only `<CourseReviews>` in the app
+// was inside the certificate modal on the course player.
 
-const CourseRatingBadge = ({ courseId, compact = false, summary = null }) => {
+const CourseRatingBadge = ({
+  courseId,
+  compact = false,
+  summary = null,
+  onOpen = null,
+  courseTitle = "",
+}) => {
   const [fetched, setFetched] = useState(null);
 
   const provided = summary ? normalizeSummary(summary) : null;
@@ -48,16 +60,36 @@ const CourseRatingBadge = ({ courseId, compact = false, summary = null }) => {
 
   const value = provided || fetched || EMPTY_SUMMARY;
 
-  return (
-    <div className={`course-rating-badge ${compact ? "is-compact" : ""}`}>
+  const contents = (
+    <>
       <RatingStars value={value.averageRating} readOnly size="0.95rem" />
       <strong>{value.averageRating || "New"}</strong>
       <span>
         {value.totalReviews}{" "}
         {value.totalReviews === 1 ? "review" : "reviews"}
       </span>
-    </div>
+    </>
   );
+
+  const className = `course-rating-badge ${compact ? "is-compact" : ""}`;
+
+  // A button only when there is somewhere to go. The stars, the average and
+  // the count render as three separate nodes, which is not a sentence, so the
+  // accessible name carries the whole thing and says what activating it does.
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        className={`${className} is-interactive`}
+        onClick={() => onOpen(courseId)}
+        aria-label={describeReviewsLink(value, courseTitle)}
+      >
+        {contents}
+      </button>
+    );
+  }
+
+  return <div className={className}>{contents}</div>;
 };
 
 CourseRatingBadge.propTypes = {
@@ -67,6 +99,8 @@ CourseRatingBadge.propTypes = {
     averageRating: PropTypes.number,
     totalReviews: PropTypes.number,
   }),
+  onOpen: PropTypes.func,
+  courseTitle: PropTypes.string,
 };
 
 export default CourseRatingBadge;
